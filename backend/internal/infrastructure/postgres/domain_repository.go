@@ -36,6 +36,29 @@ func (r *DomainRepository) Create(ctx context.Context, d *domain.Domain) error {
 	return err
 }
 
+func (r *DomainRepository) scanDomain(row interface {
+	Scan(dest ...any) error
+}) (*domain.Domain, error) {
+	d := &domain.Domain{}
+	var setupRecord, setupDKIMRecord *string
+	err := row.Scan(
+		&d.ID, &d.OrganizationID, &d.Name, &d.Status, &d.DNSVerified,
+		&d.SPFRecord, &d.DKIMRecord, &d.DMARCRecord,
+		&setupRecord, &setupDKIMRecord, &d.SetupVerified,
+		&d.VerifiedAt, &d.CreatedAt, &d.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if setupRecord != nil {
+		d.SetupRecord = *setupRecord
+	}
+	if setupDKIMRecord != nil {
+		d.SetupDKIMRecord = *setupDKIMRecord
+	}
+	return d, nil
+}
+
 func (r *DomainRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Domain, error) {
 	query := `
 		SELECT id, organization_id, name, status, dns_verified,
@@ -44,13 +67,7 @@ func (r *DomainRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.D
 		       verified_at, created_at, updated_at
 		FROM domains WHERE id = $1
 	`
-	d := &domain.Domain{}
-	err := r.db.QueryRow(ctx, query, id).Scan(
-		&d.ID, &d.OrganizationID, &d.Name, &d.Status, &d.DNSVerified,
-		&d.SPFRecord, &d.DKIMRecord, &d.DMARCRecord,
-		&d.SetupRecord, &d.SetupDKIMRecord, &d.SetupVerified,
-		&d.VerifiedAt, &d.CreatedAt, &d.UpdatedAt,
-	)
+	d, err := r.scanDomain(r.db.QueryRow(ctx, query, id))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrNotFound
@@ -68,13 +85,7 @@ func (r *DomainRepository) GetByName(ctx context.Context, name string) (*domain.
 		       verified_at, created_at, updated_at
 		FROM domains WHERE name = $1
 	`
-	d := &domain.Domain{}
-	err := r.db.QueryRow(ctx, query, name).Scan(
-		&d.ID, &d.OrganizationID, &d.Name, &d.Status, &d.DNSVerified,
-		&d.SPFRecord, &d.DKIMRecord, &d.DMARCRecord,
-		&d.SetupRecord, &d.SetupDKIMRecord, &d.SetupVerified,
-		&d.VerifiedAt, &d.CreatedAt, &d.UpdatedAt,
-	)
+	d, err := r.scanDomain(r.db.QueryRow(ctx, query, name))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, domain.ErrNotFound
@@ -102,13 +113,8 @@ func (r *DomainRepository) ListByOrganization(ctx context.Context, orgID uuid.UU
 
 	var domains []*domain.Domain
 	for rows.Next() {
-		d := &domain.Domain{}
-		if err := rows.Scan(
-			&d.ID, &d.OrganizationID, &d.Name, &d.Status, &d.DNSVerified,
-			&d.SPFRecord, &d.DKIMRecord, &d.DMARCRecord,
-			&d.SetupRecord, &d.SetupDKIMRecord, &d.SetupVerified,
-			&d.VerifiedAt, &d.CreatedAt, &d.UpdatedAt,
-		); err != nil {
+		d, err := r.scanDomain(rows)
+		if err != nil {
 			return nil, err
 		}
 		domains = append(domains, d)

@@ -92,6 +92,7 @@ services:
       redis:
         condition: service_healthy
     networks:
+      - public
       - internal
     healthcheck:
       test: ["CMD", "pgrep", "-f", "worker"]
