@@ -2,6 +2,10 @@ package application
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"regexp"
@@ -228,11 +232,44 @@ func (s *DomainService) DeleteDomain(ctx context.Context, id uuid.UUID, orgID uu
 	return nil
 }
 
-// generateDNSRecords generates DNS records for email authentication
+func (s *DomainService) RegenerateDNSRecords(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*domain.Domain, error) {
+	dom, err := s.domainRepo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if dom.OrganizationID != orgID {
+		return nil, domain.ErrForbidden
+	}
+
+	records := s.generateDNSRecords(dom.Name)
+	dom.SPFRecord = records.SPF
+	dom.DKIMRecord = records.DKIM
+	dom.DMARCRecord = records.DMARC
+	dom.DNSVerified = false
+	dom.Status = domain.DomainStatusPending
+	dom.UpdatedAt = time.Now()
+
+	if err := s.domainRepo.Update(ctx, dom); err != nil {
+		return nil, err
+	}
+	return dom, nil
+}
 func (s *DomainService) generateDNSRecords(domainName string) DNSRecords {
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	var dkimPublicKey string
+	if err == nil {
+		pubDER, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+		if err == nil {
+			dkimPublicKey = base64.StdEncoding.EncodeToString(pubDER)
+		}
+	}
+	if dkimPublicKey == "" {
+		dkimPublicKey = "GENERATION_FAILED"
+	}
+
 	return DNSRecords{
-		SPF:   fmt.Sprintf("v=spf1 mx ~all"),
-		DKIM:  fmt.Sprintf("v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC..."),
+		SPF:   "v=spf1 mx include:mailgo.io ~all",
+		DKIM:  fmt.Sprintf("v=DKIM1; k=rsa; p=%s", dkimPublicKey),
 		DMARC: fmt.Sprintf("v=DMARC1; p=quarantine; rua=mailto:dmarc@%s", domainName),
 	}
 }

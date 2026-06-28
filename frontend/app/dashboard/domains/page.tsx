@@ -70,6 +70,18 @@ export default function DomainsPage() {
     }
   }
 
+  const showDns = async (d: Domain) => {
+    let current = d
+    if (d.dkim_record.includes('...')) {
+      try {
+        current = await domainApi.regenerate(d.id)
+        load()
+      } catch {}
+    }
+    setSelected(current)
+    setDnsOpen(true)
+  }
+
   const handleDelete = async () => {
     if (!selected) return
     try {
@@ -139,7 +151,7 @@ export default function DomainsPage() {
                         variant="outline"
                         size="sm"
                         className="rounded-lg text-xs"
-                        onClick={() => { setSelected(d); setDnsOpen(true) }}
+                        onClick={() => showDns(d)}
                       >
                         DNS Records
                       </Button>
@@ -204,13 +216,13 @@ export default function DomainsPage() {
         <ModalContent className="max-w-2xl">
           <ModalHeader>
             <ModalTitle>DNS Records — {selected?.name}</ModalTitle>
-            <ModalDescription>Add these records to your DNS provider to verify ownership and enable email.</ModalDescription>
+            <ModalDescription>Add these TXT records to your DNS provider, then click Verify.</ModalDescription>
           </ModalHeader>
           <div className="space-y-4 my-2">
             {selected && [
-              { type: 'TXT (SPF)', key: 'spf', value: selected.spf_record },
-              { type: 'TXT (DKIM)', key: 'dkim', value: selected.dkim_record },
-              { type: 'TXT (DMARC)', key: 'dmarc', value: selected.dmarc_record },
+              { type: 'TXT — SPF', key: 'spf', value: selected.spf_record },
+              { type: 'TXT — DKIM', key: 'dkim', value: selected.dkim_record },
+              { type: 'TXT — DMARC', key: 'dmarc', value: selected.dmarc_record },
             ].map((rec) => (
               <div key={rec.key} className="bg-gray-50 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-2">
@@ -219,10 +231,10 @@ export default function DomainsPage() {
                     onClick={() => copy(rec.value, rec.key)}
                     className="text-xs text-blue-600 hover:text-blue-700 font-medium"
                   >
-                    {copied === rec.key ? 'Copied!' : 'Copy'}
+                    {copied === rec.key ? '✓ Copied' : 'Copy'}
                   </button>
                 </div>
-                <p className="text-sm font-mono text-gray-800 break-all">{rec.value}</p>
+                <p className="text-xs font-mono text-gray-800 break-all leading-relaxed">{rec.value}</p>
               </div>
             ))}
           </div>
@@ -247,17 +259,14 @@ export default function DomainsPage() {
           <ModalHeader>
             <ModalTitle>Delete Domain</ModalTitle>
             <ModalDescription>
-              Are you sure you want to delete <strong>{selected?.name}</strong>? This will also delete all mailboxes under this domain.
+              Are you sure you want to delete <strong>{selected?.name}</strong>? All mailboxes under this domain will also be deleted.
             </ModalDescription>
           </ModalHeader>
           <ModalFooter>
             <ModalClose asChild>
               <Button variant="outline" className="rounded-lg">Cancel</Button>
             </ModalClose>
-            <Button
-              className="rounded-lg bg-red-600 hover:bg-red-700 text-white"
-              onClick={handleDelete}
-            >
+            <Button className="rounded-lg bg-red-600 hover:bg-red-700 text-white" onClick={handleDelete}>
               Delete
             </Button>
           </ModalFooter>

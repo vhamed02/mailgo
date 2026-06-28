@@ -162,8 +162,21 @@ func (h *DomainHandler) Verify(c echo.Context) error {
 	return c.JSON(http.StatusOK, d)
 }
 
-// Delete removes a domain.
-// DELETE /api/v1/domains/:id
+func (h *DomainHandler) Regenerate(c echo.Context) error {
+	orgID, err := h.orgID(c)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})
+	}
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid domain id"})
+	}
+	d, err := h.service.RegenerateDNSRecords(c.Request().Context(), id, orgID)
+	if err != nil {
+		return domainError(c, err)
+	}
+	return c.JSON(http.StatusOK, d)
+}
 func (h *DomainHandler) Delete(c echo.Context) error {
 	orgID, err := h.orgID(c)
 	if err != nil {

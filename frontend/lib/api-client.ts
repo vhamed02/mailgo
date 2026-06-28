@@ -140,6 +140,11 @@ export const domainApi = {
     const response = await apiClient.post(`/domains/${id}/verify`)
     return response.data
   },
+
+  regenerate: async (id: string) => {
+    const response = await apiClient.post(`/domains/${id}/regenerate`)
+    return response.data
+  },
 }
 
 // Organization API

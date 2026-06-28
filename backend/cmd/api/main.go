@@ -163,6 +163,7 @@ func main() {
 	protected.GET("/domains/:id", domainHandler.Get)
 	protected.DELETE("/domains/:id", domainHandler.Delete)
 	protected.POST("/domains/:id/verify", domainHandler.Verify)
+	protected.POST("/domains/:id/regenerate", domainHandler.Regenerate)
 
 	// Mailbox routes
 	mailboxHandler := handlers.NewMailboxHandler(mailboxService)
