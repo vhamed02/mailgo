@@ -64,7 +64,17 @@ func (s *DomainService) AddDomain(ctx context.Context, req AddDomainRequest) (*d
 	// Check quota
 	quota, err := s.quotaRepo.GetByOrganization(ctx, req.OrganizationID)
 	if err != nil {
-		return nil, err
+		if err == domain.ErrNotFound {
+			if createErr := s.quotaRepo.CreateDefault(ctx, req.OrganizationID); createErr != nil {
+				return nil, createErr
+			}
+			quota, err = s.quotaRepo.GetByOrganization(ctx, req.OrganizationID)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
 	}
 
 	currentCount, err := s.domainRepo.CountByOrganization(ctx, req.OrganizationID)

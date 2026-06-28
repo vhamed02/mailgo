@@ -44,16 +44,16 @@ func (h *DomainHandler) userID(c echo.Context) (uuid.UUID, error) {
 
 func domainError(c echo.Context, err error) error {
 	switch {
-	case errors.Is(err, domain.ErrNotFound):
-		return c.JSON(http.StatusNotFound, map[string]string{"error": "domain not found"})
-	case errors.Is(err, domain.ErrForbidden):
-		return c.JSON(http.StatusForbidden, map[string]string{"error": "access denied"})
 	case errors.Is(err, domain.ErrDomainInUse):
 		return c.JSON(http.StatusConflict, map[string]string{"error": "domain already in use"})
 	case errors.Is(err, domain.ErrInvalidDomainName):
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid domain name"})
 	case errors.Is(err, domain.ErrDomainLimitReached):
 		return c.JSON(http.StatusUnprocessableEntity, map[string]string{"error": "domain limit reached for this organisation"})
+	case errors.Is(err, domain.ErrForbidden):
+		return c.JSON(http.StatusForbidden, map[string]string{"error": "access denied"})
+	case errors.Is(err, domain.ErrNotFound):
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "domain not found"})
 	default:
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "internal server error"})
 	}
