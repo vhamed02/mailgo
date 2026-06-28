@@ -16,11 +16,7 @@ export const ModalOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <Dialog.Overlay
     ref={ref}
-    className={cn(
-      'fixed inset-0 z-50 bg-black/50 backdrop-blur-sm',
-      'animate-in', // custom keyframe defined in tailwind.config.js
-      className
-    )}
+    className={cn('fixed inset-0 z-50 bg-black/50 backdrop-blur-sm modal-overlay', className)}
     {...props}
   />
 ))
@@ -37,8 +33,7 @@ export const ModalContent = React.forwardRef<
       ref={ref}
       className={cn(
         'fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2',
-        'w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl',
-        'animate-zoom-in animate-slide-in',
+        'w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl modal-content',
         className
       )}
       {...props}
