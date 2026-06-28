@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -22,10 +23,12 @@ import (
 	restmiddleware "github.com/mailgo/backend/internal/api/rest/middleware"
 	"github.com/mailgo/backend/internal/application"
 	"github.com/mailgo/backend/internal/infrastructure/brevo"
+	imapinfra "github.com/mailgo/backend/internal/infrastructure/imap"
 	"github.com/mailgo/backend/internal/infrastructure/mailcow"
 	"github.com/mailgo/backend/internal/infrastructure/postgres"
 	"github.com/mailgo/backend/internal/infrastructure/queue"
 	rediscache "github.com/mailgo/backend/internal/infrastructure/redis"
+	smtpinfra "github.com/mailgo/backend/internal/infrastructure/smtp"
 )
 
 func main() {
@@ -65,12 +68,34 @@ func main() {
 		getEnv("BREVO_FROM_NAME", "MailGo"),
 		30*time.Second,
 	)
-	_ = emailSenderAdapter // Used by workers, not API yet
+	_ = emailSenderAdapter
 
 	cacheAdapter := rediscache.NewAdapter(redisClient)
-	_ = cacheAdapter // Will be used for caching
+	_ = cacheAdapter
 
 	queueAdapter := queue.NewAdapter(redisClient)
+
+	imapPort := 993
+	imapTLS := true
+	if p := getEnv("IMAP_PORT", ""); p != "" {
+		if v, err := strconv.Atoi(p); err == nil {
+			imapPort = v
+		}
+	}
+	if getEnv("IMAP_TLS", "true") == "false" {
+		imapTLS = false
+	}
+	imapAdapter := imapinfra.NewAdapter(getEnv("IMAP_HOST", "mailcow"), imapPort, imapTLS)
+
+	smtpPort := 587
+	if p := getEnv("SMTP_PORT", ""); p != "" {
+		if v, err := strconv.Atoi(p); err == nil {
+			smtpPort = v
+		}
+	}
+	smtpAdapter := smtpinfra.NewAdapter(getEnv("SMTP_HOST", "mailcow"), smtpPort)
+
+	mailService := application.NewMailService(imapAdapter, smtpAdapter, getEnv("BREVO_FROM_NAME", "MailGo"))
 
 	// Initialize repositories
 	userRepo := postgres.NewUserRepository(db)
@@ -156,6 +181,15 @@ func main() {
 
 	// User info
 	protected.GET("/auth/me", authHandler.Me)
+
+	mailHandler := handlers.NewMailHandler(mailService)
+	protected.GET("/mail/folders", mailHandler.ListFolders)
+	protected.GET("/mail/folders/:folder/messages", mailHandler.ListMessages)
+	protected.GET("/mail/messages/:uid", mailHandler.GetMessage)
+	protected.PATCH("/mail/messages/:uid/read", mailHandler.MarkRead)
+	protected.DELETE("/mail/messages/:uid", mailHandler.DeleteMessage)
+	protected.POST("/mail/compose", mailHandler.Compose)
+	protected.POST("/mail/reply", mailHandler.Reply)
 
 	// Domain routes
 	domainHandler := handlers.NewDomainHandler(domainService)
