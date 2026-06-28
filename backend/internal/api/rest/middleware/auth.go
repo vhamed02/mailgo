@@ -42,6 +42,9 @@ func AuthMiddleware(authService *application.AuthService) echo.MiddlewareFunc {
 			c.Set("user_id", claims.UserID)
 			c.Set("organization_id", claims.OrganizationID)
 			c.Set("role", claims.Role)
+			if claims.Email != "" {
+				c.Set("user_email", claims.Email)
+			}
 
 			return next(c)
 		}

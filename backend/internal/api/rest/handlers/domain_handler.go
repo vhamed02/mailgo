@@ -154,7 +154,9 @@ func (h *DomainHandler) Verify(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid domain id"})
 	}
 
-	d, err := h.service.VerifyDomain(c.Request().Context(), id, orgID, userID)
+	userEmail, _ := c.Get("user_email").(string)
+
+	d, err := h.service.VerifyDomain(c.Request().Context(), id, orgID, userID, userEmail)
 	if err != nil {
 		return domainError(c, err)
 	}

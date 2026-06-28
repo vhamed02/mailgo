@@ -41,6 +41,7 @@ type AddDomainRequest struct {
 	OrganizationID uuid.UUID
 	Name           string
 	UserID         uuid.UUID
+	UserEmail      string
 }
 
 type DNSRecords struct {
@@ -154,7 +155,7 @@ func (s *DomainService) ListDomains(ctx context.Context, orgID uuid.UUID) ([]*do
 }
 
 // VerifyDomain triggers DNS verification for a domain
-func (s *DomainService) VerifyDomain(ctx context.Context, id uuid.UUID, orgID uuid.UUID, userID uuid.UUID) (*domain.Domain, error) {
+func (s *DomainService) VerifyDomain(ctx context.Context, id uuid.UUID, orgID uuid.UUID, userID uuid.UUID, userEmail string) (*domain.Domain, error) {
 	dom, err := s.domainRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -178,6 +179,18 @@ func (s *DomainService) VerifyDomain(ctx context.Context, id uuid.UUID, orgID uu
 		if err := s.domainRepo.Update(ctx, dom); err != nil {
 			return nil, err
 		}
+
+		_ = s.queue.EnqueueEmailSend(ctx, domain.SendEmailRequest{
+			To:      []string{userEmail},
+			Subject: fmt.Sprintf("Domain %s verified ✓", dom.Name),
+			Body: fmt.Sprintf(`<html><body>
+<h2>Domain verified!</h2>
+<p>Your domain <strong>%s</strong> has been verified and is now active.</p>
+<p>You can now create mailboxes under this domain.</p>
+<p>— The MailGo Team</p>
+</body></html>`, dom.Name),
+			IsHTML: true,
+		})
 
 		// Audit log
 		s.auditRepo.Create(ctx, &domain.AuditLog{

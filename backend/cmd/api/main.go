@@ -93,6 +93,7 @@ func main() {
 		quotaRepo,
 		auditRepo,
 		txManager,
+		queueAdapter,
 		getEnv("JWT_SECRET", "change-this-in-production"),
 		15*time.Minute,
 	)

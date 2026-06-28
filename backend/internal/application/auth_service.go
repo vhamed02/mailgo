@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -18,6 +19,7 @@ type AuthService struct {
 	quotaRepo   domain.QuotaRepository
 	auditRepo   domain.AuditLogRepository
 	txManager   *postgres.TxManager
+	queue       domain.QueueAdapter
 	jwtSecret   string
 	jwtExpiry   time.Duration
 }
@@ -29,6 +31,7 @@ func NewAuthService(
 	quotaRepo domain.QuotaRepository,
 	auditRepo domain.AuditLogRepository,
 	txManager *postgres.TxManager,
+	queue domain.QueueAdapter,
 	jwtSecret string,
 	jwtExpiry time.Duration,
 ) *AuthService {
@@ -39,6 +42,7 @@ func NewAuthService(
 		quotaRepo:   quotaRepo,
 		auditRepo:   auditRepo,
 		txManager:   txManager,
+		queue:       queue,
 		jwtSecret:   jwtSecret,
 		jwtExpiry:   jwtExpiry,
 	}
@@ -147,8 +151,20 @@ func (s *AuthService) Register(ctx context.Context, req RegisterRequest) (*AuthR
 		CreatedAt:      time.Now(),
 	})
 
+	_ = s.queue.EnqueueEmailSend(ctx, domain.SendEmailRequest{
+		To:      []string{user.Email},
+		Subject: "Welcome to MailGo!",
+		Body: fmt.Sprintf(`<html><body>
+<h2>Welcome, %s!</h2>
+<p>Your account and organisation <strong>%s</strong> are ready.</p>
+<p>Start by adding a domain, then create mailboxes for your team.</p>
+<p>— The MailGo Team</p>
+</body></html>`, user.FirstName, org.Name),
+		IsHTML: true,
+	})
+
 	// Generate tokens
-	accessToken, expiresAt, err := s.generateToken(user.ID, org.ID, orgUser.Role)
+	accessToken, expiresAt, err := s.generateToken(user.ID, org.ID, orgUser.Role, user.Email)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +248,7 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*AuthRespons
 	})
 
 	// Generate tokens
-	accessToken, expiresAt, err := s.generateToken(user.ID, org.ID, orgUser.Role)
+	accessToken, expiresAt, err := s.generateToken(user.ID, org.ID, orgUser.Role, user.Email)
 	if err != nil {
 		println("ERROR: generateToken failed:", err.Error())
 		return nil, err
@@ -258,16 +274,18 @@ type Claims struct {
 	UserID         uuid.UUID   `json:"user_id"`
 	OrganizationID uuid.UUID   `json:"organization_id"`
 	Role           domain.Role `json:"role"`
+	Email          string      `json:"email"`
 	jwt.RegisteredClaims
 }
 
-func (s *AuthService) generateToken(userID, orgID uuid.UUID, role domain.Role) (string, time.Time, error) {
+func (s *AuthService) generateToken(userID, orgID uuid.UUID, role domain.Role, email string) (string, time.Time, error) {
 	expiresAt := time.Now().Add(s.jwtExpiry)
-	
+
 	claims := &Claims{
 		UserID:         userID,
 		OrganizationID: orgID,
 		Role:           role,
+		Email:          email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiresAt),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

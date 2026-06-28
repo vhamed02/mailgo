@@ -137,9 +137,20 @@ func (s *MailboxService) CreateMailbox(ctx context.Context, req CreateMailboxReq
 	// Enqueue async provisioning on mail server (infrastructure)
 	// This decouples control plane from infrastructure timing/failures
 	if err := s.queue.EnqueueMailboxProvision(ctx, mailbox.ID, mailbox.Email, req.Password); err != nil {
-		// Log error but don't fail - we can retry later
 		fmt.Printf("Failed to enqueue mailbox provision: %v\n", err)
 	}
+
+	_ = s.queue.EnqueueEmailSend(ctx, domain.SendEmailRequest{
+		To:      []string{mailbox.Email},
+		Subject: "Your new mailbox is ready",
+		Body: fmt.Sprintf(`<html><body>
+<h2>Mailbox created!</h2>
+<p>Your mailbox <strong>%s</strong> has been created and is being provisioned.</p>
+<p>It will be ready within a few minutes.</p>
+<p>— The MailGo Team</p>
+</body></html>`, mailbox.Email),
+		IsHTML: true,
+	})
 
 	// Audit log
 	s.auditRepo.Create(ctx, &domain.AuditLog{
