@@ -109,6 +109,7 @@ services:
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8080/api/v1
+      NEXT_PUBLIC_WEBMAIL_URL: http://localhost:8081
       NODE_ENV: production
     ports:
       - "3000:3000"
@@ -122,30 +123,9 @@ services:
       timeout: 10s
       retries: 3
 
-  # Mailcow Stack (Infrastructure - Internal Only)
-  # Note: Mailcow requires separate installation
-  # See: https://github.com/mailcow/mailcow-dockerized
-  # Uncomment and configure after installing Mailcow separately
-  
-  # mailcow:
-  #   image: mailcow/mailcow:latest
-  #   container_name: mailgo-mailcow
-  #   restart: unless-stopped
-  #   environment:
-  #     - MAILCOW_HOSTNAME=mail.internal
-  #     - DBNAME=mailcow
-  #     - DBUSER=mailcow
-  #     - DBPASS=mailcow_password
-  #   volumes:
-  #     - mailcow_data:/var/vmail
-  #     - mailcow_mysql:/var/lib/mysql
-  #   ports:
-  #     - "8081:8080"  # Admin UI (internal access only)
-  #     - "25:25"      # SMTP
-  #     - "587:587"    # Submission
-  #     - "993:993"    # IMAPS
-  #   networks:
-  #     - internal
+  # Mailcow (full mail server stack) runs separately via docker/mailcow-compose.yml
+  # Start it with: docker compose -f docker/mailcow-compose.yml up -d
+  # Webmail available at http://localhost:8081 after setup
 
 networks:
   public:
