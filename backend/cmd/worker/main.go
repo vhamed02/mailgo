@@ -11,6 +11,7 @@ import (
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -35,9 +36,15 @@ func main() {
 	defer db.Close()
 
 	// Initialize Redis client for Asynq
+	redisURL := getEnv("REDIS_URL", "redis://localhost:6379/0")
+	opt, err := redis.ParseURL(redisURL)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to parse Redis URL")
+	}
+
 	redisOpt := asynq.RedisClientOpt{
-		Addr: getEnv("REDIS_ADDR", "localhost:6379"),
-		DB:   0,
+		Addr: opt.Addr,
+		DB:   opt.DB,
 	}
 
 	// Initialize infrastructure adapters
