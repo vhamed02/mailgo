@@ -66,25 +66,30 @@ const (
 
 // Domain represents an email domain
 type Domain struct {
-	ID             uuid.UUID    `json:"id"`
-	OrganizationID uuid.UUID    `json:"organization_id"`
-	Name           string       `json:"name"`
-	Status         DomainStatus `json:"status"`
-	DNSVerified    bool         `json:"dns_verified"`
-	SPFRecord      string       `json:"spf_record"`
-	DKIMRecord     string       `json:"dkim_record"`
-	DMARCRecord    string       `json:"dmarc_record"`
-	VerifiedAt     *time.Time   `json:"verified_at,omitempty"`
-	CreatedAt      time.Time    `json:"created_at"`
-	UpdatedAt      time.Time    `json:"updated_at"`
+	ID               uuid.UUID    `json:"id"`
+	OrganizationID   uuid.UUID    `json:"organization_id"`
+	Name             string       `json:"name"`
+	Status           DomainStatus `json:"status"`
+	DNSVerified      bool         `json:"dns_verified"`
+	SPFRecord        string       `json:"spf_record"`
+	DKIMRecord       string       `json:"dkim_record"`
+	DMARCRecord      string       `json:"dmarc_record"`
+	SetupRecord      string       `json:"setup_record"`
+	SetupDKIMRecord  string       `json:"setup_dkim_record"`
+	SetupVerified    bool         `json:"setup_verified"`
+	VerifiedAt       *time.Time   `json:"verified_at,omitempty"`
+	CreatedAt        time.Time    `json:"created_at"`
+	UpdatedAt        time.Time    `json:"updated_at"`
 }
 
 type DomainStatus string
 
 const (
-	DomainStatusPending  DomainStatus = "pending"
-	DomainStatusActive   DomainStatus = "active"
-	DomainStatusInactive DomainStatus = "inactive"
+	DomainStatusPending    DomainStatus = "pending"
+	DomainStatusDNSPending DomainStatus = "dns_pending"
+	DomainStatusActive     DomainStatus = "active"
+	DomainStatusInactive   DomainStatus = "inactive"
+	DomainStatusFailed     DomainStatus = "failed"
 )
 
 // Mailbox represents an email account

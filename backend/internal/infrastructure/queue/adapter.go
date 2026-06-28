@@ -40,10 +40,17 @@ func (a *Adapter) EnqueueMailboxDelete(ctx context.Context, email string) error 
 	return err
 }
 
-func (a *Adapter) EnqueueDomainVerification(ctx context.Context, domainID uuid.UUID) error {
+func (a *Adapter) EnqueueDomainSetup(ctx context.Context, domainID uuid.UUID) error {
 	payload, _ := json.Marshal(map[string]interface{}{"domain_id": domainID})
+	task := asynq.NewTask("domain:setup", payload)
+	_, err := a.client.Enqueue(task, asynq.Queue("default"))
+	return err
+}
+
+func (a *Adapter) EnqueueDomainVerification(ctx context.Context, domainID uuid.UUID, userEmail string) error {
+	payload, _ := json.Marshal(map[string]interface{}{"domain_id": domainID, "user_email": userEmail})
 	task := asynq.NewTask("domain:verify", payload)
-	_, err := a.client.Enqueue(task, asynq.Queue("low"))
+	_, err := a.client.Enqueue(task, asynq.Queue("default"))
 	return err
 }
 

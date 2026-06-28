@@ -129,20 +129,23 @@ type MailboxStats struct {
 	MessageCount int
 }
 
-// EmailSenderAdapter abstracts email sending operations (e.g., Brevo)
-// This interface ensures business logic never depends on specific email provider
 type EmailSenderAdapter interface {
-	// SendTransactionalEmail sends a single transactional email
 	SendTransactionalEmail(ctx context.Context, req SendEmailRequest) error
-	
-	// SendWelcomeEmail sends a welcome email to new users
 	SendWelcomeEmail(ctx context.Context, to, name string) error
-	
-	// SendPasswordResetEmail sends a password reset email
 	SendPasswordResetEmail(ctx context.Context, to, resetLink string) error
-	
-	// SendVerificationEmail sends email verification
 	SendVerificationEmail(ctx context.Context, to, verifyLink string) error
+}
+
+type EmailProviderAdapter interface {
+	RegisterDomain(ctx context.Context, domainName string) (*EmailProviderDomainConfig, error)
+	AuthenticateDomain(ctx context.Context, domainName string) error
+	GetDomainConfig(ctx context.Context, domainName string) (*EmailProviderDomainConfig, error)
+}
+
+type EmailProviderDomainConfig struct {
+	SetupRecord     string
+	SetupDKIMRecord string
+	Verified        bool
 }
 
 type SendEmailRequest struct {
@@ -170,7 +173,8 @@ type CacheAdapter interface {
 type QueueAdapter interface {
 	EnqueueMailboxProvision(ctx context.Context, mailboxID uuid.UUID, email, password string) error
 	EnqueueMailboxDelete(ctx context.Context, email string) error
-	EnqueueDomainVerification(ctx context.Context, domainID uuid.UUID) error
+	EnqueueDomainSetup(ctx context.Context, domainID uuid.UUID) error
+	EnqueueDomainVerification(ctx context.Context, domainID uuid.UUID, userEmail string) error
 	EnqueueEmailSend(ctx context.Context, req SendEmailRequest) error
 	EnqueueAuditLogProcess(ctx context.Context, logID uuid.UUID) error
 }

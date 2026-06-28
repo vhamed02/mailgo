@@ -65,6 +65,7 @@ func main() {
 		domainRepo,
 		mailServerAdapter,
 		emailSenderAdapter,
+		emailSenderAdapter,
 	)
 
 	// Create Asynq server
@@ -92,6 +93,7 @@ func main() {
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(worker.TypeMailboxProvision, handlers.HandleMailboxProvision)
 	mux.HandleFunc(worker.TypeMailboxDelete, handlers.HandleMailboxDelete)
+	mux.HandleFunc(worker.TypeDomainSetup, handlers.HandleDomainSetup)
 	mux.HandleFunc(worker.TypeDomainVerification, handlers.HandleDomainVerification)
 	mux.HandleFunc(worker.TypeEmailSend, handlers.HandleEmailSend)
 	mux.HandleFunc(worker.TypeAuditLogProcess, handlers.HandleAuditLogProcess)

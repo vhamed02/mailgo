@@ -112,10 +112,7 @@ func (s *DomainService) AddDomain(ctx context.Context, req AddDomainRequest) (*d
 		return nil, err
 	}
 
-	// Enqueue DNS verification check
-	if err := s.queue.EnqueueDomainVerification(ctx, dom.ID); err != nil {
-		fmt.Printf("Failed to enqueue domain verification: %v\n", err)
-	}
+	_ = s.queue.EnqueueDomainSetup(ctx, dom.ID)
 
 	// Audit log
 	s.auditRepo.Create(ctx, &domain.AuditLog{
@@ -160,52 +157,11 @@ func (s *DomainService) VerifyDomain(ctx context.Context, id uuid.UUID, orgID uu
 	if err != nil {
 		return nil, err
 	}
-
 	if dom.OrganizationID != orgID {
 		return nil, domain.ErrForbidden
 	}
 
-	// In a real implementation, this would check DNS records
-	// For now, we'll simulate verification
-	verified := s.checkDNSRecords(dom)
-
-	if verified {
-		now := time.Now()
-		dom.DNSVerified = true
-		dom.Status = domain.DomainStatusActive
-		dom.VerifiedAt = &now
-		dom.UpdatedAt = now
-
-		if err := s.domainRepo.Update(ctx, dom); err != nil {
-			return nil, err
-		}
-
-		_ = s.queue.EnqueueEmailSend(ctx, domain.SendEmailRequest{
-			To:      []string{userEmail},
-			Subject: fmt.Sprintf("Domain %s verified ✓", dom.Name),
-			Body: fmt.Sprintf(`<html><body>
-<h2>Domain verified!</h2>
-<p>Your domain <strong>%s</strong> has been verified and is now active.</p>
-<p>You can now create mailboxes under this domain.</p>
-<p>— The MailGo Team</p>
-</body></html>`, dom.Name),
-			IsHTML: true,
-		})
-
-		// Audit log
-		s.auditRepo.Create(ctx, &domain.AuditLog{
-			ID:             uuid.New(),
-			OrganizationID: orgID,
-			UserID:         &userID,
-			Action:         "verify",
-			EntityType:     "domain",
-			EntityID:       &dom.ID,
-			Details: map[string]interface{}{
-				"domain_name": dom.Name,
-			},
-			CreatedAt: time.Now(),
-		})
-	}
+	_ = s.queue.EnqueueDomainVerification(ctx, id, userEmail)
 
 	return dom, nil
 }

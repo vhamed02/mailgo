@@ -15,12 +15,17 @@ type Domain = {
   spf_record: string
   dkim_record: string
   dmarc_record: string
+  setup_record: string
+  setup_dkim_record: string
+  setup_verified: boolean
   created_at: string
 }
 
 function StatusBadge({ verified, status }: { verified: boolean; status: string }) {
   if (verified) return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />Active</span>
-  if (status === 'pending') return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"><span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />Pending</span>
+  if (status === 'pending') return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700"><span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />Setting up…</span>
+  if (status === 'dns_pending') return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"><span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />DNS Required</span>
+  if (status === 'failed') return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700"><span className="w-1.5 h-1.5 rounded-full bg-red-500" />Setup Failed</span>
   return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600"><span className="w-1.5 h-1.5 rounded-full bg-gray-400" />{status}</span>
 }
 
@@ -155,15 +160,24 @@ export default function DomainsPage() {
                       >
                         DNS Records
                       </Button>
-                      {!d.dns_verified && (
+                      {!d.dns_verified && d.status === 'dns_pending' && (
                         <Button
                           size="sm"
                           className="rounded-lg text-xs"
                           onClick={() => handleVerify(d.id)}
                           disabled={verifying === d.id}
                         >
-                          {verifying === d.id ? 'Checking...' : 'Verify'}
+                          {verifying === d.id ? 'Checking…' : 'Verify DNS'}
                         </Button>
+                      )}
+                      {d.status === 'pending' && (
+                        <span className="text-xs text-blue-500 flex items-center gap-1">
+                          <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          Setting up
+                        </span>
                       )}
                       <button
                         onClick={() => { setSelected(d); setDeleteOpen(true) }}
@@ -216,27 +230,33 @@ export default function DomainsPage() {
         <ModalContent className="max-w-2xl">
           <ModalHeader>
             <ModalTitle>DNS Records — {selected?.name}</ModalTitle>
-            <ModalDescription>Add these TXT records to your DNS provider, then click Verify.</ModalDescription>
+            <ModalDescription>
+              {selected?.status === 'pending'
+                ? 'Your domain is being registered in the background. DNS records will appear here shortly — refresh the page in a few seconds.'
+                : 'Add all these TXT records to your DNS provider, then click Verify DNS.'}
+            </ModalDescription>
           </ModalHeader>
           <div className="space-y-4 my-2">
-            {selected && [
-              { type: 'TXT — SPF', key: 'spf', value: selected.spf_record },
-              { type: 'TXT — DKIM', key: 'dkim', value: selected.dkim_record },
-              { type: 'TXT — DMARC', key: 'dmarc', value: selected.dmarc_record },
-            ].map((rec) => (
-              <div key={rec.key} className="bg-gray-50 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{rec.type}</span>
-                  <button
-                    onClick={() => copy(rec.value, rec.key)}
-                    className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    {copied === rec.key ? '✓ Copied' : 'Copy'}
-                  </button>
+            {selected && (() => {
+              const records = [
+                { type: 'TXT — SPF', key: 'spf', value: selected.spf_record },
+                { type: 'TXT — DKIM (mail server)', key: 'dkim', value: selected.dkim_record },
+                { type: 'TXT — DMARC', key: 'dmarc', value: selected.dmarc_record },
+              ]
+              if (selected.setup_record) records.push({ type: 'TXT — Email sending verification', key: 'setup', value: selected.setup_record })
+              if (selected.setup_dkim_record) records.push({ type: 'TXT — Email sending DKIM', key: 'setup_dkim', value: selected.setup_dkim_record })
+              return records.filter(r => r.value).map((rec) => (
+                <div key={rec.key} className="bg-gray-50 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{rec.type}</span>
+                    <button onClick={() => copy(rec.value, rec.key)} className="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                      {copied === rec.key ? '✓ Copied' : 'Copy'}
+                    </button>
+                  </div>
+                  <p className="text-xs font-mono text-gray-800 break-all leading-relaxed">{rec.value}</p>
                 </div>
-                <p className="text-xs font-mono text-gray-800 break-all leading-relaxed">{rec.value}</p>
-              </div>
-            ))}
+              ))
+            })()}
           </div>
           <ModalFooter>
             <ModalClose asChild>
