@@ -23,7 +23,7 @@ func (r *OrganizationUserRepository) Create(ctx context.Context, orgUser *domain
 		INSERT INTO organization_users (id, organization_id, user_id, role, joined_at)
 		VALUES ($1, $2, $3, $4, $5)
 	`
-	_, err := r.db.Exec(ctx, query,
+	_, err := GetDB(ctx, r.db).Exec(ctx, query,
 		orgUser.ID, orgUser.OrganizationID, orgUser.UserID, orgUser.Role, orgUser.JoinedAt,
 	)
 	return err

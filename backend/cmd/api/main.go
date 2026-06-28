@@ -42,6 +42,11 @@ func main() {
 	}
 	defer db.Close()
 
+	// Run migrations automatically on startup
+	if err := runMigrations(db); err != nil {
+		log.Fatal().Err(err).Msg("Failed to run database migrations")
+	}
+
 	// Initialize Redis
 	redisClient := initRedis()
 	defer redisClient.Close()
@@ -78,6 +83,7 @@ func main() {
 
 	quotaRepo := postgres.NewQuotaRepository(db)
 	auditRepo := postgres.NewAuditLogRepository(db)
+	txManager := postgres.NewTxManager(db)
 
 	// Initialize services
 	authService := application.NewAuthService(
@@ -86,6 +92,7 @@ func main() {
 		orgUserRepo,
 		quotaRepo,
 		auditRepo,
+		txManager,
 		getEnv("JWT_SECRET", "change-this-in-production"),
 		15*time.Minute,
 	)
@@ -98,7 +105,6 @@ func main() {
 		mailServerAdapter,
 		queueAdapter,
 	)
-	_ = mailboxService // Will be used for mailbox handlers
 
 	domainService := application.NewDomainService(
 		domainRepo,
@@ -106,7 +112,6 @@ func main() {
 		auditRepo,
 		queueAdapter,
 	)
-	_ = domainService // Will be used for domain handlers
 
 	// Initialize Echo server
 	e := echo.New()
@@ -151,28 +156,23 @@ func main() {
 	// User info
 	protected.GET("/auth/me", authHandler.Me)
 
-	// Organization routes
-	// orgHandler := handlers.NewOrganizationHandler(orgService)
-	// protected.GET("/organizations", orgHandler.List)
-	// protected.GET("/organizations/:id", orgHandler.Get)
-
 	// Domain routes
-	// domainHandler := handlers.NewDomainHandler(domainService)
-	// protected.GET("/domains", domainHandler.List)
-	// protected.POST("/domains", domainHandler.Create)
-	// protected.GET("/domains/:id", domainHandler.Get)
-	// protected.DELETE("/domains/:id", domainHandler.Delete)
-	// protected.POST("/domains/:id/verify", domainHandler.Verify)
+	domainHandler := handlers.NewDomainHandler(domainService)
+	protected.GET("/domains", domainHandler.List)
+	protected.POST("/domains", domainHandler.Create)
+	protected.GET("/domains/:id", domainHandler.Get)
+	protected.DELETE("/domains/:id", domainHandler.Delete)
+	protected.POST("/domains/:id/verify", domainHandler.Verify)
 
 	// Mailbox routes
-	// mailboxHandler := handlers.NewMailboxHandler(mailboxService)
-	// protected.GET("/mailboxes", mailboxHandler.List)
-	// protected.POST("/mailboxes", mailboxHandler.Create)
-	// protected.GET("/mailboxes/:id", mailboxHandler.Get)
-	// protected.PATCH("/mailboxes/:id", mailboxHandler.Update)
-	// protected.DELETE("/mailboxes/:id", mailboxHandler.Delete)
-	// protected.POST("/mailboxes/:id/suspend", mailboxHandler.Suspend)
-	// protected.POST("/mailboxes/:id/unsuspend", mailboxHandler.Unsuspend)
+	mailboxHandler := handlers.NewMailboxHandler(mailboxService)
+	protected.GET("/mailboxes", mailboxHandler.List)
+	protected.POST("/mailboxes", mailboxHandler.Create)
+	protected.GET("/mailboxes/:id", mailboxHandler.Get)
+	protected.PATCH("/mailboxes/:id", mailboxHandler.Update)
+	protected.DELETE("/mailboxes/:id", mailboxHandler.Delete)
+	protected.POST("/mailboxes/:id/suspend", mailboxHandler.Suspend)
+	protected.POST("/mailboxes/:id/unsuspend", mailboxHandler.Unsuspend)
 
 	// Start server
 	port := getEnv("APP_PORT", "8080")
@@ -278,5 +278,83 @@ func (cv *CustomValidator) Validate(i interface{}) error {
 	if err := cv.validator.Struct(i); err != nil {
 		return err
 	}
+	return nil
+}
+
+// runMigrations executes all .up.sql migration files that haven't been applied yet.
+// It uses a simple schema_migrations table to track applied migrations.
+func runMigrations(db *pgxpool.Pool) error {
+	ctx := context.Background()
+
+	// Ensure migrations tracking table exists
+	_, err := db.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS schema_migrations (
+			version VARCHAR(255) PRIMARY KEY,
+			applied_at TIMESTAMP NOT NULL DEFAULT NOW()
+		)
+	`)
+	if err != nil {
+		return fmt.Errorf("failed to create schema_migrations table: %w", err)
+	}
+
+	// If the main schema already exists but schema_migrations is empty (e.g. first
+	// run after adding this runner to an existing DB), record it as applied so we
+	// don't try to re-execute it.
+	var orgExists bool
+	_ = db.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.tables
+			WHERE table_schema = 'public' AND table_name = 'organizations'
+		)
+	`).Scan(&orgExists)
+	if orgExists {
+		_, _ = db.Exec(ctx, `
+			INSERT INTO schema_migrations (version) VALUES ('000001_initial_schema')
+			ON CONFLICT DO NOTHING
+		`)
+	}
+
+	// Migration files in order
+	migrations := []struct {
+		version string
+		path    string
+	}{
+		{"000001_initial_schema", "migrations/000001_initial_schema.up.sql"},
+	}
+
+	for _, m := range migrations {
+		// Check if already applied
+		var count int
+		err := db.QueryRow(ctx,
+			`SELECT COUNT(*) FROM schema_migrations WHERE version = $1`, m.version,
+		).Scan(&count)
+		if err != nil {
+			return fmt.Errorf("failed to check migration %s: %w", m.version, err)
+		}
+		if count > 0 {
+			log.Info().Str("version", m.version).Msg("Migration already applied, skipping")
+			continue
+		}
+
+		// Read and execute migration file
+		sql, err := os.ReadFile(m.path)
+		if err != nil {
+			return fmt.Errorf("failed to read migration file %s: %w", m.path, err)
+		}
+
+		if _, err := db.Exec(ctx, string(sql)); err != nil {
+			return fmt.Errorf("failed to execute migration %s: %w", m.version, err)
+		}
+
+		// Record as applied
+		if _, err := db.Exec(ctx,
+			`INSERT INTO schema_migrations (version) VALUES ($1)`, m.version,
+		); err != nil {
+			return fmt.Errorf("failed to record migration %s: %w", m.version, err)
+		}
+
+		log.Info().Str("version", m.version).Msg("Migration applied successfully")
+	}
+
 	return nil
 }

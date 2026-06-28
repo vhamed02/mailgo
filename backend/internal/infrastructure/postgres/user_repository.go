@@ -24,7 +24,7 @@ func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
 		INSERT INTO users (id, email, password_hash, first_name, last_name, email_verified, status, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
-	_, err := r.db.Exec(ctx, query,
+	_, err := GetDB(ctx, r.db).Exec(ctx, query,
 		user.ID, user.Email, user.PasswordHash, user.FirstName, user.LastName,
 		user.EmailVerified, user.Status, user.CreatedAt, user.UpdatedAt,
 	)

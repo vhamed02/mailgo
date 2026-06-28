@@ -45,6 +45,8 @@ func NewHandlers(
 // Mailbox Provision Payload
 type MailboxProvisionPayload struct {
 	MailboxID uuid.UUID `json:"mailbox_id"`
+	Email     string    `json:"email"`
+	Password  string    `json:"password"`
 }
 
 // HandleMailboxProvision provisions a mailbox on the mail server
@@ -56,18 +58,19 @@ func (h *Handlers) HandleMailboxProvision(ctx context.Context, task *asynq.Task)
 
 	log.Info().
 		Str("mailbox_id", payload.MailboxID.String()).
+		Str("email", payload.Email).
 		Msg("Provisioning mailbox")
 
-	// Get mailbox from database
+	// Get mailbox from database for display name and quota
 	mailbox, err := h.mailboxRepo.GetByID(ctx, payload.MailboxID)
 	if err != nil {
 		return fmt.Errorf("failed to get mailbox: %w", err)
 	}
 
-	// Provision on mail server
+	// Provision on mail server using the plaintext password from the job payload
 	req := domain.CreateMailboxRequest{
 		Email:       mailbox.Email,
-		Password:    mailbox.PasswordHash, // Note: Should use actual password, not hash
+		Password:    payload.Password,
 		DisplayName: mailbox.DisplayName,
 		QuotaBytes:  mailbox.QuotaBytes,
 	}

@@ -22,8 +22,12 @@ func NewAdapter(redisClient *redis.Client) *Adapter {
 	}
 }
 
-func (a *Adapter) EnqueueMailboxProvision(ctx context.Context, mailboxID uuid.UUID) error {
-	payload, _ := json.Marshal(map[string]interface{}{"mailbox_id": mailboxID})
+func (a *Adapter) EnqueueMailboxProvision(ctx context.Context, mailboxID uuid.UUID, email, password string) error {
+	payload, _ := json.Marshal(map[string]interface{}{
+		"mailbox_id": mailboxID,
+		"email":      email,
+		"password":   password,
+	})
 	task := asynq.NewTask("mailbox:provision", payload)
 	_, err := a.client.Enqueue(task, asynq.Queue("default"))
 	return err

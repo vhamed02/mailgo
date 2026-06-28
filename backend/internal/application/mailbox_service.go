@@ -126,9 +126,8 @@ func (s *MailboxService) CreateMailbox(ctx context.Context, req CreateMailboxReq
 
 	// Enqueue async provisioning on mail server (infrastructure)
 	// This decouples control plane from infrastructure timing/failures
-	if err := s.queue.EnqueueMailboxProvision(ctx, mailbox.ID); err != nil {
+	if err := s.queue.EnqueueMailboxProvision(ctx, mailbox.ID, mailbox.Email, req.Password); err != nil {
 		// Log error but don't fail - we can retry later
-		// In production, implement dead letter queue handling
 		fmt.Printf("Failed to enqueue mailbox provision: %v\n", err)
 	}
 

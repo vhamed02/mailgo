@@ -19,7 +19,7 @@ func NewOrganizationRepository(db *pgxpool.Pool) *OrganizationRepository {
 
 func (r *OrganizationRepository) Create(ctx context.Context, org *domain.Organization) error {
 	query := `INSERT INTO organizations (id, name, slug, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)`
-	_, err := r.db.Exec(ctx, query, org.ID, org.Name, org.Slug, org.Status, org.CreatedAt, org.UpdatedAt)
+	_, err := GetDB(ctx, r.db).Exec(ctx, query, org.ID, org.Name, org.Slug, org.Status, org.CreatedAt, org.UpdatedAt)
 	return err
 }
 

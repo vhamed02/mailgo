@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"net"
 	"regexp"
 	"strings"
 	"time"
@@ -227,9 +228,17 @@ func (s *DomainService) generateDNSRecords(domainName string) DNSRecords {
 }
 
 // checkDNSRecords verifies DNS records are properly configured
-// In production, this would query actual DNS servers
+// by performing real DNS TXT record lookups.
 func (s *DomainService) checkDNSRecords(dom *domain.Domain) bool {
-	// TODO: Implement actual DNS lookup
-	// For now, return false to keep domains in pending state
+	// Check SPF record
+	txts, err := net.LookupTXT(dom.Name)
+	if err != nil {
+		return false
+	}
+	for _, txt := range txts {
+		if strings.HasPrefix(txt, "v=spf1") {
+			return true
+		}
+	}
 	return false
 }

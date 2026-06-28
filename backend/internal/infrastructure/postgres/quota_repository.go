@@ -41,7 +41,7 @@ func (r *QuotaRepository) CreateDefault(ctx context.Context, orgID uuid.UUID) er
 		INSERT INTO quotas (id, organization_id, max_domains, max_mailboxes, max_storage_gb, max_aliases, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
-	_, err := r.db.Exec(ctx, query,
+	_, err := GetDB(ctx, r.db).Exec(ctx, query,
 		uuid.New(),
 		orgID,
 		5,   // Default: 5 domains

@@ -168,7 +168,7 @@ type CacheAdapter interface {
 
 // QueueAdapter abstracts async job queue operations (e.g., Asynq)
 type QueueAdapter interface {
-	EnqueueMailboxProvision(ctx context.Context, mailboxID uuid.UUID) error
+	EnqueueMailboxProvision(ctx context.Context, mailboxID uuid.UUID, email, password string) error
 	EnqueueMailboxDelete(ctx context.Context, email string) error
 	EnqueueDomainVerification(ctx context.Context, domainID uuid.UUID) error
 	EnqueueEmailSend(ctx context.Context, req SendEmailRequest) error

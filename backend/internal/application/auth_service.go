@@ -7,6 +7,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/mailgo/backend/internal/domain"
+	"github.com/mailgo/backend/internal/infrastructure/postgres"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -16,6 +17,7 @@ type AuthService struct {
 	orgUserRepo domain.OrganizationUserRepository
 	quotaRepo   domain.QuotaRepository
 	auditRepo   domain.AuditLogRepository
+	txManager   *postgres.TxManager
 	jwtSecret   string
 	jwtExpiry   time.Duration
 }
@@ -26,6 +28,7 @@ func NewAuthService(
 	orgUserRepo domain.OrganizationUserRepository,
 	quotaRepo domain.QuotaRepository,
 	auditRepo domain.AuditLogRepository,
+	txManager *postgres.TxManager,
 	jwtSecret string,
 	jwtExpiry time.Duration,
 ) *AuthService {
@@ -35,6 +38,7 @@ func NewAuthService(
 		orgUserRepo: orgUserRepo,
 		quotaRepo:   quotaRepo,
 		auditRepo:   auditRepo,
+		txManager:   txManager,
 		jwtSecret:   jwtSecret,
 		jwtExpiry:   jwtExpiry,
 	}
@@ -62,80 +66,78 @@ type AuthResponse struct {
 	ExpiresAt    time.Time      `json:"expires_at"`
 }
 
-// Register creates a new user and organization
-// NOTE: This should be wrapped in a database transaction in a future refactor
-// For now, operations are executed sequentially with error handling
+// Register creates a new user and organization atomically.
+// All operations run inside a single database transaction — if any step fails
+// the entire registration is rolled back, preventing orphaned records.
 func (s *AuthService) Register(ctx context.Context, req RegisterRequest) (*AuthResponse, error) {
-	// Check if user already exists
+	// Check if user already exists (outside transaction — read-only, safe to do early)
 	existing, _ := s.userRepo.GetByEmail(ctx, req.Email)
 	if existing != nil {
 		return nil, domain.ErrAlreadyExists
 	}
 
-	// Hash password
+	// Hash password before the transaction to avoid holding the tx open during CPU work
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		println("ERROR: Password hashing failed:", err.Error())
 		return nil, err
 	}
 
-	// Create user
-	user := &domain.User{
-		ID:           uuid.New(),
-		Email:        req.Email,
-		PasswordHash: string(passwordHash),
-		FirstName:    req.FirstName,
-		LastName:     req.LastName,
-		Status:       domain.UserStatusActive,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
-	}
+	var (
+		user    *domain.User
+		org     *domain.Organization
+		orgUser *domain.OrganizationUser
+	)
 
-	if err := s.userRepo.Create(ctx, user); err != nil {
-		println("ERROR: User creation failed:", err.Error())
+	err = s.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
+		user = &domain.User{
+			ID:           uuid.New(),
+			Email:        req.Email,
+			PasswordHash: string(passwordHash),
+			FirstName:    req.FirstName,
+			LastName:     req.LastName,
+			Status:       domain.UserStatusActive,
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
+		}
+		if err := s.userRepo.Create(txCtx, user); err != nil {
+			return err
+		}
+
+		org = &domain.Organization{
+			ID:        uuid.New(),
+			Name:      req.OrgName,
+			Slug:      req.OrgSlug,
+			Status:    domain.OrgStatusActive,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+		if err := s.orgRepo.Create(txCtx, org); err != nil {
+			return err
+		}
+
+		orgUser = &domain.OrganizationUser{
+			ID:             uuid.New(),
+			OrganizationID: org.ID,
+			UserID:         user.ID,
+			Role:           domain.RoleOwner,
+			JoinedAt:       time.Now(),
+		}
+		if err := s.orgUserRepo.Create(txCtx, orgUser); err != nil {
+			return err
+		}
+
+		if err := s.quotaRepo.CreateDefault(txCtx, org.ID); err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	// Create organization
-	org := &domain.Organization{
-		ID:        uuid.New(),
-		Name:      req.OrgName,
-		Slug:      req.OrgSlug,
-		Status:    domain.OrgStatusActive,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-
-	if err := s.orgRepo.Create(ctx, org); err != nil {
-		println("ERROR: Organization creation failed:", err.Error())
-		// TODO: Rollback user creation in transaction
-		return nil, err
-	}
-
-	// Create organization-user relationship (owner role)
-	orgUser := &domain.OrganizationUser{
-		ID:             uuid.New(),
-		OrganizationID: org.ID,
-		UserID:         user.ID,
-		Role:           domain.RoleOwner,
-		JoinedAt:       time.Now(),
-	}
-
-	if err := s.orgUserRepo.Create(ctx, orgUser); err != nil {
-		println("ERROR: Organization-user relationship creation failed:", err.Error())
-		// TODO: Rollback user and org creation in transaction
-		return nil, err
-	}
-
-	// Create default quota
-	if err := s.quotaRepo.CreateDefault(ctx, org.ID); err != nil {
-		println("ERROR: Quota creation failed:", err.Error())
-		// TODO: Rollback all previous operations in transaction
-		return nil, err
-	}
-
-	// Audit log (best effort - don't fail registration if this fails)
-	if err := s.auditRepo.Create(ctx, &domain.AuditLog{
+	// Audit log — best effort, outside transaction so it never blocks registration
+	_ = s.auditRepo.Create(ctx, &domain.AuditLog{
 		ID:             uuid.New(),
 		OrganizationID: org.ID,
 		UserID:         &user.ID,
@@ -143,23 +145,15 @@ func (s *AuthService) Register(ctx context.Context, req RegisterRequest) (*AuthR
 		EntityType:     "user",
 		EntityID:       &user.ID,
 		CreatedAt:      time.Now(),
-	}); err != nil {
-		println("WARN: Audit log creation failed:", err.Error())
-		// Continue - audit log failure should not block registration
-	}
-
-	println("INFO: Registration successful for", user.Email)
+	})
 
 	// Generate tokens
 	accessToken, expiresAt, err := s.generateToken(user.ID, org.ID, orgUser.Role)
 	if err != nil {
-		println("ERROR: Token generation failed:", err.Error())
 		return nil, err
 	}
-
 	refreshToken, _, err := s.generateRefreshToken(user.ID)
 	if err != nil {
-		println("ERROR: Refresh token generation failed:", err.Error())
 		return nil, err
 	}
 
