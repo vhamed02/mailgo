@@ -1,0 +1,141 @@
+syntax = "proto3";
+
+package provisioning;
+
+option go_package = "github.com/mailgo/backend/proto/provisioning";
+
+// ProvisioningService handles internal gRPC communication for mailbox provisioning
+service ProvisioningService {
+  rpc ProvisionMailbox(ProvisionMailboxRequest) returns (ProvisionMailboxResponse);
+  rpc DeleteMailbox(DeleteMailboxRequest) returns (DeleteMailboxResponse);
+  rpc UpdateMailboxQuota(UpdateQuotaRequest) returns (UpdateQuotaResponse);
+  rpc GetMailboxStats(GetStatsRequest) returns (GetStatsResponse);
+}
+
+message ProvisionMailboxRequest {
+  string mailbox_id = 1;
+  string email = 2;
+  string password = 3;
+  string display_name = 4;
+  int64 quota_bytes = 5;
+}
+
+message ProvisionMailboxResponse {
+  bool success = 1;
+  string message = 2;
+  string error = 3;
+}
+
+message DeleteMailboxRequest {
+  string email = 1;
+}
+
+message DeleteMailboxResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message UpdateQuotaRequest {
+  string email = 1;
+  int64 quota_bytes = 2;
+}
+
+message UpdateQuotaResponse {
+  bool success = 1;
+}
+
+message GetStatsRequest {
+  string email = 1;
+}
+
+message GetStatsResponse {
+  int64 used_bytes = 1;
+  int64 quota_bytes = 2;
+  int32 message_count = 3;
+}
+
+// TenantService handles organization/tenant operations
+service TenantService {
+  rpc CreateOrganization(CreateOrgRequest) returns (CreateOrgResponse);
+  rpc GetOrganizationQuota(GetQuotaRequest) returns (GetQuotaResponse);
+  rpc UpdateOrganizationQuota(UpdateOrgQuotaRequest) returns (UpdateOrgQuotaResponse);
+}
+
+message CreateOrgRequest {
+  string name = 1;
+  string slug = 2;
+  string owner_email = 3;
+}
+
+message CreateOrgResponse {
+  string organization_id = 1;
+  bool success = 2;
+}
+
+message GetQuotaRequest {
+  string organization_id = 1;
+}
+
+message GetQuotaResponse {
+  int32 max_domains = 1;
+  int32 max_mailboxes = 2;
+  int32 max_storage_gb = 3;
+  int32 max_aliases = 4;
+  int32 current_domains = 5;
+  int32 current_mailboxes = 6;
+  int32 current_storage_gb = 7;
+  int32 current_aliases = 8;
+}
+
+message UpdateOrgQuotaRequest {
+  string organization_id = 1;
+  int32 max_domains = 2;
+  int32 max_mailboxes = 3;
+  int32 max_storage_gb = 4;
+  int32 max_aliases = 5;
+}
+
+message UpdateOrgQuotaResponse {
+  bool success = 1;
+}
+
+// AuditService handles audit log operations
+service AuditService {
+  rpc LogAction(LogActionRequest) returns (LogActionResponse);
+  rpc GetAuditLogs(GetAuditLogsRequest) returns (GetAuditLogsResponse);
+}
+
+message LogActionRequest {
+  string organization_id = 1;
+  string user_id = 2;
+  string action = 3;
+  string entity_type = 4;
+  string entity_id = 5;
+  map<string, string> details = 6;
+  string ip_address = 7;
+  string user_agent = 8;
+}
+
+message LogActionResponse {
+  bool success = 1;
+}
+
+message GetAuditLogsRequest {
+  string organization_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message AuditLogEntry {
+  string id = 1;
+  string user_id = 2;
+  string action = 3;
+  string entity_type = 4;
+  string entity_id = 5;
+  string created_at = 6;
+}
+
+message GetAuditLogsResponse {
+  repeated AuditLogEntry logs = 1;
+  int32 total_count = 2;
+}

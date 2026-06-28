@@ -1,0 +1,165 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: mailgo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mailgo
+      POSTGRES_USER: mailgo
+      POSTGRES_PASSWORD: mailgo_password
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mailgo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache & Queue
+  redis:
+    image: redis:7-alpine
+    container_name: mailgo-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Control Plane API (Go Backend)
+  control-plane:
+    build:
+      context: ./backend
+      dockerfile: ../docker/Dockerfile.api
+    container_name: mailgo-control-plane
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      APP_ENV: production
+      APP_PORT: 8080
+      DATABASE_URL: postgresql://mailgo:mailgo_password@postgres:5432/mailgo?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8080:8080"
+      - "9090:9090"  # Metrics
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - public
+      - internal
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      - ./backend/migrations:/app/migrations:ro
+
+  # Async Worker (Asynq)
+  worker:
+    build:
+      context: ./backend
+      dockerfile: ../docker/Dockerfile.worker
+    container_name: mailgo-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://mailgo:mailgo_password@postgres:5432/mailgo?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+      ASYNQ_CONCURRENCY: 10
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "worker"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/Dockerfile.frontend
+    container_name: mailgo-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080/api/v1
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - control-plane
+    networks:
+      - public
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Mailcow Stack (Infrastructure - Internal Only)
+  # Note: Mailcow requires separate installation
+  # See: https://github.com/mailcow/mailcow-dockerized
+  # Uncomment and configure after installing Mailcow separately
+  
+  # mailcow:
+  #   image: mailcow/mailcow:latest
+  #   container_name: mailgo-mailcow
+  #   restart: unless-stopped
+  #   environment:
+  #     - MAILCOW_HOSTNAME=mail.internal
+  #     - DBNAME=mailcow
+  #     - DBUSER=mailcow
+  #     - DBPASS=mailcow_password
+  #   volumes:
+  #     - mailcow_data:/var/vmail
+  #     - mailcow_mysql:/var/lib/mysql
+  #   ports:
+  #     - "8081:8080"  # Admin UI (internal access only)
+  #     - "25:25"      # SMTP
+  #     - "587:587"    # Submission
+  #     - "993:993"    # IMAPS
+  #   networks:
+  #     - internal
+
+networks:
+  public:
+    driver: bridge
+  internal:
+    driver: bridge
+    internal: true  # No external access
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  # Uncomment when Mailcow is installed
+  # mailcow_data:
+  #   driver: local
+  # mailcow_mysql:
+  #   driver: local
