@@ -109,7 +109,6 @@ services:
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8080/api/v1
-      NEXT_PUBLIC_WEBMAIL_URL: http://localhost:8081
       NODE_ENV: production
     ports:
       - "3000:3000"
@@ -123,9 +122,8 @@ services:
       timeout: 10s
       retries: 3
 
-  # Mailcow (full mail server stack) runs separately via docker/mailcow-compose.yml
-  # Start it with: docker compose -f docker/mailcow-compose.yml up -d
-  # Webmail available at http://localhost:8081 after setup
+  # Mailcow (full mail server stack) is configured separately
+  # See: https://github.com/mailcow/mailcow-dockerized
 
 networks:
   public:
