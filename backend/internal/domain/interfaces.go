@@ -143,9 +143,14 @@ type EmailProviderAdapter interface {
 }
 
 type EmailProviderDomainConfig struct {
-	SetupRecord     string
-	SetupDKIMRecord string
-	Verified        bool
+	BrevoCodeValue     string
+	BrevoDkim1Host     string
+	BrevoDkim1Value    string
+	BrevoDkim2Host     string
+	BrevoDkim2Value    string
+	BrevoDmarcValue    string
+	Verified           bool
+	Authenticated      bool
 }
 
 type SendEmailRequest struct {

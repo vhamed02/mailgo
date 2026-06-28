@@ -323,6 +323,7 @@ func runMigrations(db *pgxpool.Pool) error {
 	}{
 		{"000001_initial_schema", "migrations/000001_initial_schema.up.sql"},
 		{"000002_domain_email_setup", "migrations/000002_domain_email_setup.up.sql"},
+		{"000003_domain_dns_records", "migrations/000003_domain_dns_records.up.sql"},
 	}
 
 	for _, m := range migrations {

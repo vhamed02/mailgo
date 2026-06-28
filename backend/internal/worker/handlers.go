@@ -128,10 +128,14 @@ func (h *Handlers) HandleDomainSetup(ctx context.Context, task *asynq.Task) erro
 		return fmt.Errorf("failed to register domain: %w", err)
 	}
 
-	dom.SetupRecord = config.SetupRecord
-	dom.SetupDKIMRecord = config.SetupDKIMRecord
-	dom.Status = domain.DomainStatusDNSPending
-	dom.UpdatedAt = time.Now()
+	dom.BrevoCodeValue  = config.BrevoCodeValue
+	dom.BrevoDkim1Host  = config.BrevoDkim1Host
+	dom.BrevoDkim1Value = config.BrevoDkim1Value
+	dom.BrevoDkim2Host  = config.BrevoDkim2Host
+	dom.BrevoDkim2Value = config.BrevoDkim2Value
+	dom.BrevoDmarcValue = config.BrevoDmarcValue
+	dom.Status          = domain.DomainStatusDNSPending
+	dom.UpdatedAt       = time.Now()
 
 	if err := h.domainRepo.Update(ctx, dom); err != nil {
 		return fmt.Errorf("failed to update domain: %w", err)
@@ -171,7 +175,8 @@ func (h *Handlers) HandleDomainVerification(ctx context.Context, task *asynq.Tas
 	if spfOK && providerOK {
 		now := time.Now()
 		dom.DNSVerified = true
-		dom.SetupVerified = true
+		dom.BrevoVerified = true
+		dom.BrevoAuthenticated = true
 		dom.Status = domain.DomainStatusActive
 		dom.VerifiedAt = &now
 		dom.UpdatedAt = now

@@ -36,26 +36,7 @@ func (a *Adapter) RegisterDomain(ctx context.Context, domainName string) (*domai
 	if err != nil {
 		return nil, err
 	}
-
-	var result struct {
-		DNSRecords struct {
-			BrevoCode struct {
-				Value string `json:"value"`
-			} `json:"brevo_code"`
-			DKIM struct {
-				Value string `json:"value"`
-			} `json:"dkim_record"`
-		} `json:"dns_records"`
-	}
-	if err := json.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to parse domain registration response: %w", err)
-	}
-
-	return &domain.EmailProviderDomainConfig{
-		SetupRecord:     result.DNSRecords.BrevoCode.Value,
-		SetupDKIMRecord: result.DNSRecords.DKIM.Value,
-		Verified:        false,
-	}, nil
+	return a.parseDomainConfig(respBody)
 }
 
 func (a *Adapter) GetDomainConfig(ctx context.Context, domainName string) (*domain.EmailProviderDomainConfig, error) {
@@ -63,32 +44,60 @@ func (a *Adapter) GetDomainConfig(ctx context.Context, domainName string) (*doma
 	if err != nil {
 		return nil, err
 	}
-
-	var result struct {
-		Verified   bool `json:"verified"`
-		DNSRecords struct {
-			BrevoCode struct {
-				Value string `json:"value"`
-			} `json:"brevo_code"`
-			DKIM struct {
-				Value string `json:"value"`
-			} `json:"dkim_record"`
-		} `json:"dns_records"`
-	}
-	if err := json.Unmarshal(respBody, &result); err != nil {
-		return nil, fmt.Errorf("failed to parse domain config response: %w", err)
-	}
-
-	return &domain.EmailProviderDomainConfig{
-		SetupRecord:     result.DNSRecords.BrevoCode.Value,
-		SetupDKIMRecord: result.DNSRecords.DKIM.Value,
-		Verified:        result.Verified,
-	}, nil
+	return a.parseDomainConfig(respBody)
 }
 
 func (a *Adapter) AuthenticateDomain(ctx context.Context, domainName string) error {
 	_, err := a.makeRequestWithResponse(ctx, "PUT", "/senders/domains/"+domainName+"/authenticate", nil)
 	return err
+}
+
+type brevoRecord struct {
+	Type     string `json:"type"`
+	Value    string `json:"value"`
+	HostName string `json:"host_name"`
+	Status   bool   `json:"status"`
+}
+
+type brevoDomainResponse struct {
+	Domain        string `json:"domain"`
+	Verified      bool   `json:"verified"`
+	Authenticated bool   `json:"authenticated"`
+	DNSRecords    struct {
+		BrevoCode   *brevoRecord `json:"brevo_code"`
+		Dkim1Record *brevoRecord `json:"dkim1Record"`
+		Dkim2Record *brevoRecord `json:"dkim2Record"`
+		DmarcRecord *brevoRecord `json:"dmarc_record"`
+	} `json:"dns_records"`
+}
+
+func (a *Adapter) parseDomainConfig(data []byte) (*domain.EmailProviderDomainConfig, error) {
+	var resp brevoDomainResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, fmt.Errorf("failed to parse domain response: %w", err)
+	}
+
+	cfg := &domain.EmailProviderDomainConfig{
+		Verified:      resp.Verified,
+		Authenticated: resp.Authenticated,
+	}
+
+	if resp.DNSRecords.BrevoCode != nil {
+		cfg.BrevoCodeValue = resp.DNSRecords.BrevoCode.Value
+	}
+	if resp.DNSRecords.Dkim1Record != nil {
+		cfg.BrevoDkim1Host = resp.DNSRecords.Dkim1Record.HostName
+		cfg.BrevoDkim1Value = resp.DNSRecords.Dkim1Record.Value
+	}
+	if resp.DNSRecords.Dkim2Record != nil {
+		cfg.BrevoDkim2Host = resp.DNSRecords.Dkim2Record.HostName
+		cfg.BrevoDkim2Value = resp.DNSRecords.Dkim2Record.Value
+	}
+	if resp.DNSRecords.DmarcRecord != nil {
+		cfg.BrevoDmarcValue = resp.DNSRecords.DmarcRecord.Value
+	}
+
+	return cfg, nil
 }
 
 func (a *Adapter) SendTransactionalEmail(ctx context.Context, req domain.SendEmailRequest) error {

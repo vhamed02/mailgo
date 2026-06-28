@@ -7,7 +7,6 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
-	"net"
 	"regexp"
 	"strings"
 	"time"
@@ -44,29 +43,19 @@ type AddDomainRequest struct {
 	UserEmail      string
 }
 
-type DNSRecords struct {
-	SPF   string `json:"spf"`
-	DKIM  string `json:"dkim"`
-	DMARC string `json:"dmarc"`
-}
-
 var domainRegex = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
 
-// AddDomain adds a new domain to an organization
 func (s *DomainService) AddDomain(ctx context.Context, req AddDomainRequest) (*domain.Domain, error) {
-	// Validate domain name
 	domainName := strings.ToLower(strings.TrimSpace(req.Name))
 	if !domainRegex.MatchString(domainName) {
 		return nil, domain.ErrInvalidDomainName
 	}
 
-	// Check if domain already exists
 	existing, _ := s.domainRepo.GetByName(ctx, domainName)
 	if existing != nil {
 		return nil, domain.ErrDomainInUse
 	}
 
-	// Check quota
 	quota, err := s.quotaRepo.GetByOrganization(ctx, req.OrganizationID)
 	if err != nil {
 		if err == domain.ErrNotFound {
@@ -86,24 +75,20 @@ func (s *DomainService) AddDomain(ctx context.Context, req AddDomainRequest) (*d
 	if err != nil {
 		return nil, err
 	}
-
 	if currentCount >= quota.MaxDomains {
 		return nil, domain.ErrDomainLimitReached
 	}
 
-	// Generate DNS records
-	dnsRecords := s.generateDNSRecords(domainName)
+	spf, dkim := s.generateMailcowRecords(domainName)
 
-	// Create domain
 	dom := &domain.Domain{
 		ID:             uuid.New(),
 		OrganizationID: req.OrganizationID,
 		Name:           domainName,
 		Status:         domain.DomainStatusPending,
 		DNSVerified:    false,
-		SPFRecord:      dnsRecords.SPF,
-		DKIMRecord:     dnsRecords.DKIM,
-		DMARCRecord:    dnsRecords.DMARC,
+		SPFRecord:      spf,
+		DKIMRecord:     dkim,
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	}
@@ -114,7 +99,6 @@ func (s *DomainService) AddDomain(ctx context.Context, req AddDomainRequest) (*d
 
 	_ = s.queue.EnqueueDomainSetup(ctx, dom.ID)
 
-	// Audit log
 	s.auditRepo.Create(ctx, &domain.AuditLog{
 		ID:             uuid.New(),
 		OrganizationID: req.OrganizationID,
@@ -122,36 +106,28 @@ func (s *DomainService) AddDomain(ctx context.Context, req AddDomainRequest) (*d
 		Action:         domain.ActionCreate,
 		EntityType:     "domain",
 		EntityID:       &dom.ID,
-		Details: map[string]interface{}{
-			"domain_name": domainName,
-		},
-		CreatedAt: time.Now(),
+		Details:        map[string]interface{}{"domain_name": domainName},
+		CreatedAt:      time.Now(),
 	})
 
 	return dom, nil
 }
 
-// GetDomain retrieves a domain by ID
 func (s *DomainService) GetDomain(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (*domain.Domain, error) {
 	dom, err := s.domainRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-
-	// Verify ownership
 	if dom.OrganizationID != orgID {
 		return nil, domain.ErrForbidden
 	}
-
 	return dom, nil
 }
 
-// ListDomains lists all domains for an organization
 func (s *DomainService) ListDomains(ctx context.Context, orgID uuid.UUID) ([]*domain.Domain, error) {
 	return s.domainRepo.ListByOrganization(ctx, orgID)
 }
 
-// VerifyDomain triggers DNS verification for a domain
 func (s *DomainService) VerifyDomain(ctx context.Context, id uuid.UUID, orgID uuid.UUID, userID uuid.UUID, userEmail string) (*domain.Domain, error) {
 	dom, err := s.domainRepo.GetByID(ctx, id)
 	if err != nil {
@@ -160,31 +136,21 @@ func (s *DomainService) VerifyDomain(ctx context.Context, id uuid.UUID, orgID uu
 	if dom.OrganizationID != orgID {
 		return nil, domain.ErrForbidden
 	}
-
 	_ = s.queue.EnqueueDomainVerification(ctx, id, userEmail)
-
 	return dom, nil
 }
 
-// DeleteDomain removes a domain
 func (s *DomainService) DeleteDomain(ctx context.Context, id uuid.UUID, orgID uuid.UUID, userID uuid.UUID) error {
 	dom, err := s.domainRepo.GetByID(ctx, id)
 	if err != nil {
 		return err
 	}
-
 	if dom.OrganizationID != orgID {
 		return domain.ErrForbidden
 	}
-
-	// TODO: Check if domain has active mailboxes
-	// In production, prevent deletion if mailboxes exist or cascade delete
-
 	if err := s.domainRepo.Delete(ctx, id); err != nil {
 		return err
 	}
-
-	// Audit log
 	s.auditRepo.Create(ctx, &domain.AuditLog{
 		ID:             uuid.New(),
 		OrganizationID: orgID,
@@ -192,12 +158,9 @@ func (s *DomainService) DeleteDomain(ctx context.Context, id uuid.UUID, orgID uu
 		Action:         domain.ActionDelete,
 		EntityType:     "domain",
 		EntityID:       &id,
-		Details: map[string]interface{}{
-			"domain_name": dom.Name,
-		},
-		CreatedAt: time.Now(),
+		Details:        map[string]interface{}{"domain_name": dom.Name},
+		CreatedAt:      time.Now(),
 	})
-
 	return nil
 }
 
@@ -209,52 +172,32 @@ func (s *DomainService) RegenerateDNSRecords(ctx context.Context, id uuid.UUID, 
 	if dom.OrganizationID != orgID {
 		return nil, domain.ErrForbidden
 	}
-
-	records := s.generateDNSRecords(dom.Name)
-	dom.SPFRecord = records.SPF
-	dom.DKIMRecord = records.DKIM
-	dom.DMARCRecord = records.DMARC
+	spf, dkim := s.generateMailcowRecords(dom.Name)
+	dom.SPFRecord = spf
+	dom.DKIMRecord = dkim
 	dom.DNSVerified = false
+	dom.BrevoVerified = false
+	dom.BrevoAuthenticated = false
 	dom.Status = domain.DomainStatusPending
 	dom.UpdatedAt = time.Now()
-
 	if err := s.domainRepo.Update(ctx, dom); err != nil {
 		return nil, err
 	}
+	_ = s.queue.EnqueueDomainSetup(ctx, dom.ID)
 	return dom, nil
 }
-func (s *DomainService) generateDNSRecords(domainName string) DNSRecords {
+
+func (s *DomainService) generateMailcowRecords(domainName string) (spf, dkim string) {
+	spf = "v=spf1 mx include:mailgo.io ~all"
+
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	var dkimPublicKey string
 	if err == nil {
 		pubDER, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
 		if err == nil {
-			dkimPublicKey = base64.StdEncoding.EncodeToString(pubDER)
+			dkim = fmt.Sprintf("v=DKIM1; k=rsa; p=%s", base64.StdEncoding.EncodeToString(pubDER))
+			return
 		}
 	}
-	if dkimPublicKey == "" {
-		dkimPublicKey = "GENERATION_FAILED"
-	}
-
-	return DNSRecords{
-		SPF:   "v=spf1 mx include:mailgo.io ~all",
-		DKIM:  fmt.Sprintf("v=DKIM1; k=rsa; p=%s", dkimPublicKey),
-		DMARC: fmt.Sprintf("v=DMARC1; p=quarantine; rua=mailto:dmarc@%s", domainName),
-	}
-}
-
-// checkDNSRecords verifies DNS records are properly configured
-// by performing real DNS TXT record lookups.
-func (s *DomainService) checkDNSRecords(dom *domain.Domain) bool {
-	// Check SPF record
-	txts, err := net.LookupTXT(dom.Name)
-	if err != nil {
-		return false
-	}
-	for _, txt := range txts {
-		if strings.HasPrefix(txt, "v=spf1") {
-			return true
-		}
-	}
-	return false
+	dkim = "GENERATION_FAILED"
+	return
 }

@@ -15,9 +15,14 @@ type Domain = {
   spf_record: string
   dkim_record: string
   dmarc_record: string
-  setup_record: string
-  setup_dkim_record: string
-  setup_verified: boolean
+  brevo_code_value: string
+  brevo_dkim1_host: string
+  brevo_dkim1_value: string
+  brevo_dkim2_host: string
+  brevo_dkim2_value: string
+  brevo_dmarc_value: string
+  brevo_verified: boolean
+  brevo_authenticated: boolean
   created_at: string
 }
 
@@ -236,24 +241,53 @@ export default function DomainsPage() {
                 : 'Add all these TXT records to your DNS provider, then click Verify DNS.'}
             </ModalDescription>
           </ModalHeader>
-          <div className="space-y-4 my-2">
+          <div className="space-y-3 my-2">
             {selected && (() => {
-              const records = [
-                { type: 'TXT — SPF', key: 'spf', value: selected.spf_record },
-                { type: 'TXT — DKIM (mail server)', key: 'dkim', value: selected.dkim_record },
-                { type: 'TXT — DMARC', key: 'dmarc', value: selected.dmarc_record },
-              ]
-              if (selected.setup_record) records.push({ type: 'TXT — Email sending verification', key: 'setup', value: selected.setup_record })
-              if (selected.setup_dkim_record) records.push({ type: 'TXT — Email sending DKIM', key: 'setup_dkim', value: selected.setup_dkim_record })
-              return records.filter(r => r.value).map((rec) => (
+              type Rec = { label: string; type: string; name: string; value: string; key: string }
+              const records: Rec[] = []
+
+              if (selected.spf_record) records.push({
+                label: 'SPF', type: 'TXT', name: '@', value: selected.spf_record, key: 'spf'
+              })
+              if (selected.dkim_record) records.push({
+                label: 'DKIM (mail server)', type: 'TXT', name: 'mail._domainkey', value: selected.dkim_record, key: 'dkim'
+              })
+              if (selected.brevo_code_value) records.push({
+                label: 'Email sending verification', type: 'TXT', name: '@', value: selected.brevo_code_value, key: 'brevo_code'
+              })
+              if (selected.brevo_dkim1_value) records.push({
+                label: 'Email sending DKIM 1', type: 'CNAME', name: selected.brevo_dkim1_host || 'brevo1._domainkey', value: selected.brevo_dkim1_value, key: 'dkim1'
+              })
+              if (selected.brevo_dkim2_value) records.push({
+                label: 'Email sending DKIM 2', type: 'CNAME', name: selected.brevo_dkim2_host || 'brevo2._domainkey', value: selected.brevo_dkim2_value, key: 'dkim2'
+              })
+              if (selected.brevo_dmarc_value) records.push({
+                label: 'DMARC', type: 'TXT', name: '_dmarc', value: selected.brevo_dmarc_value, key: 'dmarc'
+              })
+
+              if (records.length === 0) return (
+                <div className="text-center py-6 text-sm text-gray-500">
+                  DNS records are being prepared — check back in a few seconds.
+                </div>
+              )
+
+              return records.map((rec) => (
                 <div key={rec.key} className="bg-gray-50 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{rec.type}</span>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-gray-700">{rec.label}</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-gray-200 text-gray-600 font-mono">{rec.type}</span>
+                    </div>
                     <button onClick={() => copy(rec.value, rec.key)} className="text-xs text-blue-600 hover:text-blue-700 font-medium">
-                      {copied === rec.key ? '✓ Copied' : 'Copy'}
+                      {copied === rec.key ? '✓ Copied' : 'Copy value'}
                     </button>
                   </div>
-                  <p className="text-xs font-mono text-gray-800 break-all leading-relaxed">{rec.value}</p>
+                  <div className="grid grid-cols-[80px_1fr] gap-2 text-xs">
+                    <span className="text-gray-400 font-medium pt-0.5">Name</span>
+                    <code className="font-mono text-gray-800 break-all">{rec.name}</code>
+                    <span className="text-gray-400 font-medium pt-0.5">Value</span>
+                    <code className="font-mono text-gray-800 break-all">{rec.value}</code>
+                  </div>
                 </div>
               ))
             })()}

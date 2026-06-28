@@ -66,20 +66,25 @@ const (
 
 // Domain represents an email domain
 type Domain struct {
-	ID               uuid.UUID    `json:"id"`
-	OrganizationID   uuid.UUID    `json:"organization_id"`
-	Name             string       `json:"name"`
-	Status           DomainStatus `json:"status"`
-	DNSVerified      bool         `json:"dns_verified"`
-	SPFRecord        string       `json:"spf_record"`
-	DKIMRecord       string       `json:"dkim_record"`
-	DMARCRecord      string       `json:"dmarc_record"`
-	SetupRecord      string       `json:"setup_record"`
-	SetupDKIMRecord  string       `json:"setup_dkim_record"`
-	SetupVerified    bool         `json:"setup_verified"`
-	VerifiedAt       *time.Time   `json:"verified_at,omitempty"`
-	CreatedAt        time.Time    `json:"created_at"`
-	UpdatedAt        time.Time    `json:"updated_at"`
+	ID                  uuid.UUID    `json:"id"`
+	OrganizationID      uuid.UUID    `json:"organization_id"`
+	Name                string       `json:"name"`
+	Status              DomainStatus `json:"status"`
+	DNSVerified         bool         `json:"dns_verified"`
+	SPFRecord           string       `json:"spf_record"`
+	DKIMRecord          string       `json:"dkim_record"`
+	DMARCRecord         string       `json:"dmarc_record"`
+	BrevoCodeValue      string       `json:"brevo_code_value"`
+	BrevoDkim1Host      string       `json:"brevo_dkim1_host"`
+	BrevoDkim1Value     string       `json:"brevo_dkim1_value"`
+	BrevoDkim2Host      string       `json:"brevo_dkim2_host"`
+	BrevoDkim2Value     string       `json:"brevo_dkim2_value"`
+	BrevoDmarcValue     string       `json:"brevo_dmarc_value"`
+	BrevoVerified       bool         `json:"brevo_verified"`
+	BrevoAuthenticated  bool         `json:"brevo_authenticated"`
+	VerifiedAt          *time.Time   `json:"verified_at,omitempty"`
+	CreatedAt           time.Time    `json:"created_at"`
+	UpdatedAt           time.Time    `json:"updated_at"`
 }
 
 type DomainStatus string
