@@ -95,16 +95,16 @@ function ComposePanel({ from, replyTo, onSend, onDiscard }: {
       ) : (
         <form onSubmit={handleSend} className="flex flex-col flex-1 overflow-hidden">
           <div className="px-8 py-0 divide-y divide-gray-100">
-            <div className="flex items-center py-3 gap-3">
+            <div className="flex items-center py-3 gap-8">
               <span className="text-xs font-semibold text-gray-400 uppercase w-12 flex-shrink-0">From</span>
               <span className="text-sm text-gray-600">{from}</span>
             </div>
-            <div className="flex items-center py-3 gap-3">
+            <div className="flex items-center py-3 gap-8">
               <span className="text-xs font-semibold text-gray-400 uppercase w-12 flex-shrink-0">To</span>
               <input value={to} onChange={e => setTo(e.target.value)} required placeholder="recipient@example.com"
                 className="flex-1 text-sm text-gray-900 focus:outline-none bg-transparent" />
             </div>
-            <div className="flex items-center py-3 gap-3">
+            <div className="flex items-center py-3 gap-8">
               <span className="text-xs font-semibold text-gray-400 uppercase w-12 flex-shrink-0">Subject</span>
               <input value={subject} onChange={e => setSubject(e.target.value)} required placeholder="Subject"
                 className="flex-1 text-sm text-gray-900 focus:outline-none bg-transparent" />
