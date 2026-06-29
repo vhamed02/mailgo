@@ -36,7 +36,7 @@ func mailErr(c echo.Context, err error) error {
 	if strings.Contains(msg, "imap login") {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "invalid mailbox credentials"})
 	}
-	return c.JSON(http.StatusInternalServerError, map[string]string{"error": "mail operation failed"})
+	return c.JSON(http.StatusInternalServerError, map[string]string{"error": msg})
 }
 
 func (h *MailHandler) ListFolders(c echo.Context) error {

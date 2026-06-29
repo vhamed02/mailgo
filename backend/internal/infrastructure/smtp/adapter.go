@@ -2,7 +2,9 @@ package smtp
 
 import (
 	"bytes"
+	"crypto/tls"
 	"fmt"
+	"net"
 	"net/smtp"
 	"strings"
 	"time"
@@ -20,7 +22,44 @@ func NewAdapter(host string, port int) *Adapter {
 }
 
 func (a *Adapter) Send(req domain.ComposeRequest) error {
+	addr := fmt.Sprintf("%s:%d", a.host, a.port)
+
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		return fmt.Errorf("smtp dial: %w", err)
+	}
+
+	c, err := smtp.NewClient(conn, a.host)
+	if err != nil {
+		return fmt.Errorf("smtp client: %w", err)
+	}
+	defer c.Close()
+
+	tlsCfg := &tls.Config{InsecureSkipVerify: true, ServerName: a.host}
+	if err := c.StartTLS(tlsCfg); err != nil {
+		return fmt.Errorf("smtp starttls: %w", err)
+	}
+
 	auth := smtp.PlainAuth("", req.MailboxAddress, req.MailboxPassword, a.host)
+	if err := c.Auth(auth); err != nil {
+		return fmt.Errorf("smtp auth: %w", err)
+	}
+
+	if err := c.Mail(req.MailboxAddress); err != nil {
+		return fmt.Errorf("smtp mail from: %w", err)
+	}
+
+	all := append(req.To, req.CC...)
+	for _, rcpt := range all {
+		if err := c.Rcpt(rcpt); err != nil {
+			return fmt.Errorf("smtp rcpt: %w", err)
+		}
+	}
+
+	wc, err := c.Data()
+	if err != nil {
+		return fmt.Errorf("smtp data: %w", err)
+	}
 
 	var buf bytes.Buffer
 	buf.WriteString(fmt.Sprintf("From: %s\r\n", req.From))
@@ -43,11 +82,12 @@ func (a *Adapter) Send(req domain.ComposeRequest) error {
 	buf.WriteString("\r\n")
 	buf.WriteString(req.Body)
 
-	allRecipients := append(req.To, req.CC...)
-	addr := fmt.Sprintf("%s:%d", a.host, a.port)
-
-	if err := smtp.SendMail(addr, auth, req.MailboxAddress, allRecipients, buf.Bytes()); err != nil {
-		return fmt.Errorf("smtp send: %w", err)
+	if _, err := wc.Write(buf.Bytes()); err != nil {
+		return fmt.Errorf("smtp write: %w", err)
 	}
-	return nil
+	if err := wc.Close(); err != nil {
+		return fmt.Errorf("smtp close data: %w", err)
+	}
+
+	return c.Quit()
 }
