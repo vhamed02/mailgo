@@ -82,12 +82,12 @@ func (a *Adapter) ListMessages(addr, password, folder string, page, limit int) (
 	}
 
 	high := uint32(total - (page-1)*limit)
-	low := uint32(total - page*limit + 1)
-	if low < 1 {
-		low = 1
-	}
-	if high < low {
+	if high < 1 {
 		return []*domain.MailMessage{}, total, nil
+	}
+	low := uint32(1)
+	if total-page*limit+1 > 0 {
+		low = uint32(total - page*limit + 1)
 	}
 
 	seqSet := imap.SeqSet{imap.SeqRange{Start: low, Stop: high}}
