@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { authApi } from '@/lib/api-client'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -20,19 +21,7 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const response = await fetch('http://localhost:8080/api/v1/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed')
-      }
+      const data = await authApi.login({ email, password })
 
       // Store tokens and user data
       localStorage.setItem('access_token', data.access_token)
@@ -43,7 +32,7 @@ export default function LoginPage() {
       // Redirect to dashboard
       router.push('/dashboard')
     } catch (err: any) {
-      setError(err.message || 'An error occurred. Please try again.')
+      setError(err.response?.data?.error || err.message || 'An error occurred. Please try again.')
     } finally {
       setLoading(false)
     }

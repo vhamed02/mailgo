@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { authApi } from '@/lib/api-client'
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -37,19 +38,7 @@ export default function RegisterPage() {
     setError('')
 
     try {
-      const response = await fetch('http://localhost:8080/api/v1/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Registration failed')
-      }
+      const data = await authApi.register(formData)
 
       // Store tokens and user data
       localStorage.setItem('access_token', data.access_token)
@@ -60,7 +49,7 @@ export default function RegisterPage() {
       // Redirect to dashboard
       router.push('/dashboard')
     } catch (err: any) {
-      setError(err.message || 'An error occurred. Please try again.')
+      setError(err.response?.data?.error || err.message || 'An error occurred. Please try again.')
     } finally {
       setLoading(false)
     }
