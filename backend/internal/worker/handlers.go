@@ -194,6 +194,14 @@ func (h *Handlers) HandleDomainVerification(ctx context.Context, task *asynq.Tas
 	}
 
 	if spfOK && providerOK {
+		// Register the domain on the mail server (Mailcow) so it can
+		// accept mailboxes for it. This must happen before any mailbox
+		// provisioning, which Mailcow rejects for unknown domains.
+		if err := h.mailServer.CreateDomain(ctx, dom.Name); err != nil {
+			log.Error().Err(err).Str("domain", dom.Name).Msg("Failed to create domain on mail server")
+			return fmt.Errorf("failed to create domain on mail server: %w", err)
+		}
+
 		now := time.Now()
 		dom.DNSVerified = true
 		dom.BrevoVerified = true

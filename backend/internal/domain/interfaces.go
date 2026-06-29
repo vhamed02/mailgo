@@ -84,6 +84,12 @@ type AuditLogRepository interface {
 // MailServerAdapter abstracts mail server operations (e.g., Mailcow)
 // This interface ensures business logic never depends on specific mail server implementation
 type MailServerAdapter interface {
+	// CreateDomain registers a domain on the mail server so it can host mailboxes
+	CreateDomain(ctx context.Context, name string) error
+
+	// DeleteDomain removes a domain from the mail server
+	DeleteDomain(ctx context.Context, name string) error
+
 	// CreateMailbox provisions a mailbox on the mail server
 	CreateMailbox(ctx context.Context, req CreateMailboxRequest) error
 

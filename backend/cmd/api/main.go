@@ -174,14 +174,16 @@ func main() {
 	// User info
 	protected.GET("/auth/me", authHandler.Me)
 
+	// Mail routes authenticate via mailbox IMAP credentials
+	// (X-Mailbox-Address / X-Mailbox-Password headers), not JWT.
 	mailHandler := handlers.NewMailHandler(mailService)
-	protected.GET("/mail/folders", mailHandler.ListFolders)
-	protected.GET("/mail/folders/:folder/messages", mailHandler.ListMessages)
-	protected.GET("/mail/messages/:uid", mailHandler.GetMessage)
-	protected.PATCH("/mail/messages/:uid/read", mailHandler.MarkRead)
-	protected.DELETE("/mail/messages/:uid", mailHandler.DeleteMessage)
-	protected.POST("/mail/compose", mailHandler.Compose)
-	protected.POST("/mail/reply", mailHandler.Reply)
+	v1.GET("/mail/folders", mailHandler.ListFolders)
+	v1.GET("/mail/folders/:folder/messages", mailHandler.ListMessages)
+	v1.GET("/mail/messages/:uid", mailHandler.GetMessage)
+	v1.PATCH("/mail/messages/:uid/read", mailHandler.MarkRead)
+	v1.DELETE("/mail/messages/:uid", mailHandler.DeleteMessage)
+	v1.POST("/mail/compose", mailHandler.Compose)
+	v1.POST("/mail/reply", mailHandler.Reply)
 
 	// Domain routes
 	domainHandler := handlers.NewDomainHandler(domainService)

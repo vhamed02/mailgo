@@ -35,6 +35,25 @@ func NewAdapter(apiURL, apiKey string, timeout time.Duration) *Adapter {
 	}
 }
 
+// CreateDomain adds a domain to Mailcow so it can host mailboxes for it.
+// Mailcow rejects mailbox creation for unknown domains, so this must run
+// before any mailbox provisioning.
+func (a *Adapter) CreateDomain(ctx context.Context, name string) error {
+	payload := map[string]interface{}{
+		"domain": name,
+		"active": "1",
+	}
+	return a.makeRequest(ctx, "POST", "/add/domain", payload, nil)
+}
+
+// DeleteDomain removes a domain from Mailcow
+func (a *Adapter) DeleteDomain(ctx context.Context, name string) error {
+	payload := map[string]interface{}{
+		"items": []string{name},
+	}
+	return a.makeRequest(ctx, "POST", "/delete/domain", payload, nil)
+}
+
 // CreateMailbox provisions a mailbox on Mailcow
 func (a *Adapter) CreateMailbox(ctx context.Context, req domain.CreateMailboxRequest) error {
 	// Mailcow API request structure
@@ -48,17 +67,12 @@ func (a *Adapter) CreateMailbox(ctx context.Context, req domain.CreateMailboxReq
 		"active":     1,
 	}
 
-	return a.makeRequest(ctx, "POST", "/mailbox", payload, nil)
+	return a.makeRequest(ctx, "POST", "/add/mailbox", payload, nil)
 }
 
 // UpdateMailbox updates mailbox properties on Mailcow
 func (a *Adapter) UpdateMailbox(ctx context.Context, req domain.UpdateMailboxRequest) error {
-	payload := map[string]interface{}{
-		"items": []string{req.Email},
-		"attr":  map[string]interface{}{},
-	}
-
-	attrs := payload["attr"].(map[string]interface{})
+	attrs := map[string]interface{}{}
 
 	if req.DisplayName != nil {
 		attrs["name"] = *req.DisplayName
@@ -71,7 +85,12 @@ func (a *Adapter) UpdateMailbox(ctx context.Context, req domain.UpdateMailboxReq
 		attrs["quota"] = *req.QuotaBytes / (1024 * 1024) // Convert to MB
 	}
 
-	return a.makeRequest(ctx, "POST", "/mailbox", payload, nil)
+	payload := map[string]interface{}{
+		"items": []string{req.Email},
+		"attr":  attrs,
+	}
+
+	return a.makeRequest(ctx, "POST", "/edit/mailbox", payload, nil)
 }
 
 // DeleteMailbox removes a mailbox from Mailcow
@@ -80,7 +99,7 @@ func (a *Adapter) DeleteMailbox(ctx context.Context, email string) error {
 		"items": []string{email},
 	}
 
-	return a.makeRequest(ctx, "DELETE", "/mailbox", payload, nil)
+	return a.makeRequest(ctx, "POST", "/delete/mailbox", payload, nil)
 }
 
 // SuspendMailbox disables a mailbox temporarily
@@ -92,7 +111,7 @@ func (a *Adapter) SuspendMailbox(ctx context.Context, email string) error {
 		},
 	}
 
-	return a.makeRequest(ctx, "POST", "/mailbox", payload, nil)
+	return a.makeRequest(ctx, "POST", "/edit/mailbox", payload, nil)
 }
 
 // UnsuspendMailbox re-enables a suspended mailbox
@@ -104,7 +123,7 @@ func (a *Adapter) UnsuspendMailbox(ctx context.Context, email string) error {
 		},
 	}
 
-	return a.makeRequest(ctx, "POST", "/mailbox", payload, nil)
+	return a.makeRequest(ctx, "POST", "/edit/mailbox", payload, nil)
 }
 
 // CreateAlias creates an email alias on Mailcow
@@ -115,7 +134,7 @@ func (a *Adapter) CreateAlias(ctx context.Context, source, destination string) e
 		"active":  1,
 	}
 
-	return a.makeRequest(ctx, "POST", "/alias", payload, nil)
+	return a.makeRequest(ctx, "POST", "/add/alias", payload, nil)
 }
 
 // DeleteAlias removes an email alias from Mailcow
@@ -124,24 +143,26 @@ func (a *Adapter) DeleteAlias(ctx context.Context, source string) error {
 		"items": []string{source},
 	}
 
-	return a.makeRequest(ctx, "DELETE", "/alias", payload, nil)
+	return a.makeRequest(ctx, "POST", "/delete/alias", payload, nil)
 }
 
 // GetMailboxStats retrieves mailbox usage statistics
 func (a *Adapter) GetMailboxStats(ctx context.Context, email string) (*domain.MailboxStats, error) {
 	var result map[string]interface{}
-	
-	err := a.makeRequest(ctx, "GET", fmt.Sprintf("/mailbox/%s", email), nil, &result)
+
+	err := a.makeRequest(ctx, "GET", fmt.Sprintf("/get/mailbox/%s", email), nil, &result)
 	if err != nil {
 		return nil, err
 	}
 
-	// Parse Mailcow response
-	// Note: Actual response structure depends on Mailcow API version
+	usedBytes, _ := result["bytes"].(float64)
+	quota, _ := result["quota"].(float64)
+	messages, _ := result["messages"].(float64)
+
 	stats := &domain.MailboxStats{
-		UsedBytes:    int64(result["quota_used"].(float64)) * 1024 * 1024, // Convert from MB
-		QuotaBytes:   int64(result["quota"].(float64)) * 1024 * 1024,
-		MessageCount: int(result["messages"].(float64)),
+		UsedBytes:    int64(usedBytes),
+		QuotaBytes:   int64(quota) * 1024 * 1024, // Mailcow quota is in MB
+		MessageCount: int(messages),
 	}
 
 	return stats, nil
