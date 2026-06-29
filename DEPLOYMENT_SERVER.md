@@ -249,13 +249,13 @@ MailGo starts after Mailcow because `docker-compose.prod.yml` uses Mailcow's ext
 
 ```bash
 cd /home/mailgo
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 ```
 
 Wait about 2 minutes for builds. Verify:
 
 ```bash
-docker compose -f docker-compose.prod.yml ps
+docker compose --env-file .env.production -f docker-compose.prod.yml ps
 curl http://localhost:8082/health
 ```
 
@@ -322,5 +322,5 @@ docker logs mailgo-api --tail 20
 ```bash
 cd /home/mailgo
 git pull origin main
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 ```

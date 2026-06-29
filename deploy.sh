@@ -20,10 +20,10 @@ if ! docker network inspect mailcowdockerized_mailcow-network > /dev/null 2>&1; 
 fi
 
 echo "3. Building images..."
-docker compose -f docker-compose.prod.yml build --no-cache
+docker compose --env-file .env.production -f docker-compose.prod.yml build --no-cache
 
 echo "4. Starting services..."
-docker compose -f docker-compose.prod.yml up -d
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d
 
 echo "5. Waiting for API health..."
 for i in $(seq 1 30); do
