@@ -3,6 +3,7 @@ package mailcow
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -27,6 +28,9 @@ func NewAdapter(apiURL, apiKey string, timeout time.Duration) *Adapter {
 		apiKey: apiKey,
 		httpClient: &http.Client{
 			Timeout: timeout,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
 		},
 	}
 }
