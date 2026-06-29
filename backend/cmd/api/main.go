@@ -120,6 +120,7 @@ func main() {
 		quotaRepo,
 		auditRepo,
 		mailServerAdapter,
+		cacheAdapter,
 		queueAdapter,
 	)
 
@@ -144,7 +145,7 @@ func main() {
 	// Health check endpoint (no auth required)
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, map[string]string{
-			"status": "healthy",
+			"status":  "healthy",
 			"service": "mailgo-api",
 		})
 	})
@@ -228,7 +229,7 @@ func main() {
 
 func setupLogger() {
 	logLevel := getEnv("LOG_LEVEL", "info")
-	
+
 	switch logLevel {
 	case "debug":
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
@@ -272,14 +273,14 @@ func initDatabase() (*pgxpool.Pool, error) {
 
 func initRedis() *redis.Client {
 	redisURL := getEnv("REDIS_URL", "redis://localhost:6379/0")
-	
+
 	opt, err := redis.ParseURL(redisURL)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Failed to parse Redis URL")
 	}
 
 	client := redis.NewClient(opt)
-	
+
 	// Test connection
 	if err := client.Ping(context.Background()).Err(); err != nil {
 		log.Fatal().Err(err).Msg("Failed to connect to Redis")

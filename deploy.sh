@@ -13,13 +13,19 @@ export $(grep -v '^#' .env.production | xargs)
 echo "1. Pulling latest code..."
 git pull origin main
 
-echo "2. Building images..."
+echo "2. Checking Mailcow network..."
+if ! docker network inspect mailcowdockerized_mailcow-network > /dev/null 2>&1; then
+  echo "ERROR: mailcowdockerized_mailcow-network not found. Start Mailcow before MailGo."
+  exit 1
+fi
+
+echo "3. Building images..."
 docker compose -f docker-compose.prod.yml build --no-cache
 
-echo "3. Starting services..."
+echo "4. Starting services..."
 docker compose -f docker-compose.prod.yml up -d
 
-echo "4. Waiting for API health..."
+echo "5. Waiting for API health..."
 for i in $(seq 1 30); do
   if curl -sf http://localhost:8082/health > /dev/null 2>&1; then
     echo "API is healthy."
@@ -31,6 +37,6 @@ done
 
 echo ""
 echo "=== Deploy complete ==="
-echo "Frontend : https://mail.tracix.net"
-echo "API      : https://mail.tracix.net/api/v1"
+echo "Frontend : https://bizmail.tracix.net"
+echo "API      : https://bizmail.tracix.net/api/v1"
 echo "Health   : http://localhost:8082/health"

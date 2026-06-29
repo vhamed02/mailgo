@@ -30,6 +30,7 @@ type Handlers struct {
 	mailServer    domain.MailServerAdapter
 	emailSender   domain.EmailSenderAdapter
 	emailProvider domain.EmailProviderAdapter
+	cache         domain.CacheAdapter
 }
 
 func NewHandlers(
@@ -38,6 +39,7 @@ func NewHandlers(
 	mailServer domain.MailServerAdapter,
 	emailSender domain.EmailSenderAdapter,
 	emailProvider domain.EmailProviderAdapter,
+	cache domain.CacheAdapter,
 ) *Handlers {
 	return &Handlers{
 		mailboxRepo:   mailboxRepo,
@@ -45,13 +47,15 @@ func NewHandlers(
 		mailServer:    mailServer,
 		emailSender:   emailSender,
 		emailProvider: emailProvider,
+		cache:         cache,
 	}
 }
 
 type MailboxProvisionPayload struct {
-	MailboxID uuid.UUID `json:"mailbox_id"`
-	Email     string    `json:"email"`
-	Password  string    `json:"password"`
+	MailboxID   uuid.UUID `json:"mailbox_id"`
+	Email       string    `json:"email"`
+	PasswordKey string    `json:"password_key"`
+	Password    string    `json:"password,omitempty"`
 }
 
 func (h *Handlers) HandleMailboxProvision(ctx context.Context, task *asynq.Task) error {
@@ -67,9 +71,20 @@ func (h *Handlers) HandleMailboxProvision(ctx context.Context, task *asynq.Task)
 		return fmt.Errorf("failed to get mailbox: %w", err)
 	}
 
+	password := payload.Password
+	if payload.PasswordKey != "" {
+		password, err = h.cache.Get(ctx, payload.PasswordKey)
+		if err != nil {
+			return fmt.Errorf("failed to get mailbox password from cache: %w", err)
+		}
+	}
+	if password == "" {
+		return fmt.Errorf("mailbox password is empty")
+	}
+
 	req := domain.CreateMailboxRequest{
 		Email:       mailbox.Email,
-		Password:    payload.Password,
+		Password:    password,
 		DisplayName: mailbox.DisplayName,
 		QuotaBytes:  mailbox.QuotaBytes,
 	}
@@ -77,6 +92,12 @@ func (h *Handlers) HandleMailboxProvision(ctx context.Context, task *asynq.Task)
 	if err := h.mailServer.CreateMailbox(ctx, req); err != nil {
 		log.Error().Err(err).Str("email", mailbox.Email).Msg("Failed to provision mailbox")
 		return fmt.Errorf("failed to provision mailbox: %w", err)
+	}
+
+	if payload.PasswordKey != "" {
+		if err := h.cache.Delete(ctx, payload.PasswordKey); err != nil {
+			log.Warn().Err(err).Str("email", mailbox.Email).Msg("Failed to delete cached mailbox password")
+		}
 	}
 
 	log.Info().Str("email", mailbox.Email).Msg("Mailbox provisioned")
@@ -128,14 +149,14 @@ func (h *Handlers) HandleDomainSetup(ctx context.Context, task *asynq.Task) erro
 		return fmt.Errorf("failed to register domain: %w", err)
 	}
 
-	dom.BrevoCodeValue  = config.BrevoCodeValue
-	dom.BrevoDkim1Host  = config.BrevoDkim1Host
+	dom.BrevoCodeValue = config.BrevoCodeValue
+	dom.BrevoDkim1Host = config.BrevoDkim1Host
 	dom.BrevoDkim1Value = config.BrevoDkim1Value
-	dom.BrevoDkim2Host  = config.BrevoDkim2Host
+	dom.BrevoDkim2Host = config.BrevoDkim2Host
 	dom.BrevoDkim2Value = config.BrevoDkim2Value
 	dom.BrevoDmarcValue = config.BrevoDmarcValue
-	dom.Status          = domain.DomainStatusDNSPending
-	dom.UpdatedAt       = time.Now()
+	dom.Status = domain.DomainStatusDNSPending
+	dom.UpdatedAt = time.Now()
 
 	if err := h.domainRepo.Update(ctx, dom); err != nil {
 		return fmt.Errorf("failed to update domain: %w", err)

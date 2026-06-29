@@ -18,6 +18,7 @@ import (
 	"github.com/mailgo/backend/internal/infrastructure/brevo"
 	"github.com/mailgo/backend/internal/infrastructure/mailcow"
 	"github.com/mailgo/backend/internal/infrastructure/postgres"
+	rediscache "github.com/mailgo/backend/internal/infrastructure/redis"
 	"github.com/mailgo/backend/internal/worker"
 )
 
@@ -43,9 +44,17 @@ func main() {
 	}
 
 	redisOpt := asynq.RedisClientOpt{
-		Addr: opt.Addr,
-		DB:   opt.DB,
+		Addr:     opt.Addr,
+		Password: opt.Password,
+		DB:       opt.DB,
 	}
+
+	redisClient := redis.NewClient(opt)
+	defer redisClient.Close()
+	if err := redisClient.Ping(context.Background()).Err(); err != nil {
+		log.Fatal().Err(err).Msg("Failed to connect to Redis")
+	}
+	cacheAdapter := rediscache.NewAdapter(redisClient)
 
 	// Initialize infrastructure adapters
 	mailServerAdapter := mailcow.NewAdapter(
@@ -73,6 +82,7 @@ func main() {
 		mailServerAdapter,
 		emailSenderAdapter,
 		emailSenderAdapter,
+		cacheAdapter,
 	)
 
 	// Create Asynq server
@@ -81,9 +91,9 @@ func main() {
 		asynq.Config{
 			Concurrency: 10,
 			Queues: map[string]int{
-				"critical": 6,  // 60% priority
-				"default":  3,  // 30% priority
-				"low":      1,  // 10% priority
+				"critical": 6, // 60% priority
+				"default":  3, // 30% priority
+				"low":      1, // 10% priority
 			},
 			ErrorHandler: asynq.ErrorHandlerFunc(func(ctx context.Context, task *asynq.Task, err error) {
 				log.Error().
@@ -107,7 +117,7 @@ func main() {
 
 	// Start worker
 	log.Info().Msg("Starting Asynq worker...")
-	
+
 	if err := srv.Run(mux); err != nil {
 		log.Fatal().Err(err).Msg("Failed to start worker")
 	}
@@ -124,7 +134,7 @@ func main() {
 
 func setupLogger() {
 	logLevel := getEnv("LOG_LEVEL", "info")
-	
+
 	switch logLevel {
 	case "debug":
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)

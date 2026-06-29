@@ -16,17 +16,18 @@ type Adapter struct {
 func NewAdapter(redisClient *redis.Client) *Adapter {
 	return &Adapter{
 		client: asynq.NewClient(asynq.RedisClientOpt{
-			Addr: redisClient.Options().Addr,
-			DB:   redisClient.Options().DB,
+			Addr:     redisClient.Options().Addr,
+			Password: redisClient.Options().Password,
+			DB:       redisClient.Options().DB,
 		}),
 	}
 }
 
-func (a *Adapter) EnqueueMailboxProvision(ctx context.Context, mailboxID uuid.UUID, email, password string) error {
+func (a *Adapter) EnqueueMailboxProvision(ctx context.Context, mailboxID uuid.UUID, email, passwordKey string) error {
 	payload, _ := json.Marshal(map[string]interface{}{
-		"mailbox_id": mailboxID,
-		"email":      email,
-		"password":   password,
+		"mailbox_id":   mailboxID,
+		"email":        email,
+		"password_key": passwordKey,
 	})
 	task := asynq.NewTask("mailbox:provision", payload)
 	_, err := a.client.Enqueue(task, asynq.Queue("default"))

@@ -86,25 +86,25 @@ type AuditLogRepository interface {
 type MailServerAdapter interface {
 	// CreateMailbox provisions a mailbox on the mail server
 	CreateMailbox(ctx context.Context, req CreateMailboxRequest) error
-	
+
 	// UpdateMailbox updates mailbox properties (quota, password)
 	UpdateMailbox(ctx context.Context, req UpdateMailboxRequest) error
-	
+
 	// DeleteMailbox removes a mailbox from the mail server
 	DeleteMailbox(ctx context.Context, email string) error
-	
+
 	// SuspendMailbox disables a mailbox temporarily
 	SuspendMailbox(ctx context.Context, email string) error
-	
+
 	// UnsuspendMailbox re-enables a suspended mailbox
 	UnsuspendMailbox(ctx context.Context, email string) error
-	
+
 	// CreateAlias creates an email alias
 	CreateAlias(ctx context.Context, source, destination string) error
-	
+
 	// DeleteAlias removes an email alias
 	DeleteAlias(ctx context.Context, source string) error
-	
+
 	// GetMailboxStats retrieves mailbox usage statistics
 	GetMailboxStats(ctx context.Context, email string) (*MailboxStats, error)
 }
@@ -124,8 +124,8 @@ type UpdateMailboxRequest struct {
 }
 
 type MailboxStats struct {
-	UsedBytes int64
-	QuotaBytes int64
+	UsedBytes    int64
+	QuotaBytes   int64
 	MessageCount int
 }
 
@@ -143,14 +143,14 @@ type EmailProviderAdapter interface {
 }
 
 type EmailProviderDomainConfig struct {
-	BrevoCodeValue     string
-	BrevoDkim1Host     string
-	BrevoDkim1Value    string
-	BrevoDkim2Host     string
-	BrevoDkim2Value    string
-	BrevoDmarcValue    string
-	Verified           bool
-	Authenticated      bool
+	BrevoCodeValue  string
+	BrevoDkim1Host  string
+	BrevoDkim1Value string
+	BrevoDkim2Host  string
+	BrevoDkim2Value string
+	BrevoDmarcValue string
+	Verified        bool
+	Authenticated   bool
 }
 
 type SendEmailRequest struct {
@@ -176,7 +176,7 @@ type CacheAdapter interface {
 
 // QueueAdapter abstracts async job queue operations (e.g., Asynq)
 type QueueAdapter interface {
-	EnqueueMailboxProvision(ctx context.Context, mailboxID uuid.UUID, email, password string) error
+	EnqueueMailboxProvision(ctx context.Context, mailboxID uuid.UUID, email, passwordKey string) error
 	EnqueueMailboxDelete(ctx context.Context, email string) error
 	EnqueueDomainSetup(ctx context.Context, domainID uuid.UUID) error
 	EnqueueDomainVerification(ctx context.Context, domainID uuid.UUID, userEmail string) error

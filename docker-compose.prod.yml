@@ -54,6 +54,7 @@ services:
     networks:
       - mailgo-internal
       - mailgo-public
+      - mailcow-network
     volumes:
       - ./backend/migrations:/app/migrations:ro
     healthcheck:
@@ -82,6 +83,7 @@ services:
     networks:
       - mailgo-internal
       - mailgo-public
+      - mailcow-network
     healthcheck:
       test: ["CMD", "pgrep", "-f", "worker"]
       interval: 30s
@@ -96,7 +98,7 @@ services:
     container_name: mailgo-frontend
     restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_URL: https://mail.tracix.net/api/v1
+      NEXT_PUBLIC_API_URL: https://bizmail.tracix.net/api/v1
       NODE_ENV: production
     ports:
       - "127.0.0.1:3001:3000"
@@ -116,6 +118,9 @@ networks:
     internal: true
   mailgo-public:
     driver: bridge
+  mailcow-network:
+    external: true
+    name: mailcowdockerized_mailcow-network
 
 volumes:
   postgres_data:

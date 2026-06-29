@@ -11,13 +11,16 @@ import (
 )
 
 type MailboxService struct {
-	mailboxRepo   domain.MailboxRepository
-	domainRepo    domain.DomainRepository
-	quotaRepo     domain.QuotaRepository
-	auditRepo     domain.AuditLogRepository
-	mailServer    domain.MailServerAdapter
-	queue         domain.QueueAdapter
+	mailboxRepo domain.MailboxRepository
+	domainRepo  domain.DomainRepository
+	quotaRepo   domain.QuotaRepository
+	auditRepo   domain.AuditLogRepository
+	mailServer  domain.MailServerAdapter
+	cache       domain.CacheAdapter
+	queue       domain.QueueAdapter
 }
+
+const mailboxProvisionPasswordTTL = 30 * time.Minute
 
 func NewMailboxService(
 	mailboxRepo domain.MailboxRepository,
@@ -25,6 +28,7 @@ func NewMailboxService(
 	quotaRepo domain.QuotaRepository,
 	auditRepo domain.AuditLogRepository,
 	mailServer domain.MailServerAdapter,
+	cache domain.CacheAdapter,
 	queue domain.QueueAdapter,
 ) *MailboxService {
 	return &MailboxService{
@@ -33,6 +37,7 @@ func NewMailboxService(
 		quotaRepo:   quotaRepo,
 		auditRepo:   auditRepo,
 		mailServer:  mailServer,
+		cache:       cache,
 		queue:       queue,
 	}
 }
@@ -129,15 +134,22 @@ func (s *MailboxService) CreateMailbox(ctx context.Context, req CreateMailboxReq
 		UpdatedAt:      time.Now(),
 	}
 
+	passwordKey := fmt.Sprintf("mailbox:provision:%s:password", mailbox.ID.String())
+	if err := s.cache.Set(ctx, passwordKey, req.Password, mailboxProvisionPasswordTTL); err != nil {
+		return nil, err
+	}
+
 	// Save to database (control plane)
 	if err := s.mailboxRepo.Create(ctx, mailbox); err != nil {
+		_ = s.cache.Delete(ctx, passwordKey)
 		return nil, err
 	}
 
 	// Enqueue async provisioning on mail server (infrastructure)
 	// This decouples control plane from infrastructure timing/failures
-	if err := s.queue.EnqueueMailboxProvision(ctx, mailbox.ID, mailbox.Email, req.Password); err != nil {
+	if err := s.queue.EnqueueMailboxProvision(ctx, mailbox.ID, mailbox.Email, passwordKey); err != nil {
 		fmt.Printf("Failed to enqueue mailbox provision: %v\n", err)
+		_ = s.cache.Delete(ctx, passwordKey)
 	}
 
 	_ = s.queue.EnqueueEmailSend(ctx, domain.SendEmailRequest{
