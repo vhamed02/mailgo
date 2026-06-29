@@ -1,19 +1,20 @@
 package application
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/mailgo/backend/internal/domain"
 )
 
 type MailService struct {
-	imap domain.IMAPAdapter
-	smtp domain.SMTPAdapter
-	fromName string
+	imap          domain.IMAPAdapter
+	emailProvider domain.EmailSenderAdapter
+	fromName      string
 }
 
-func NewMailService(imap domain.IMAPAdapter, smtp domain.SMTPAdapter, fromName string) *MailService {
-	return &MailService{imap: imap, smtp: smtp, fromName: fromName}
+func NewMailService(imap domain.IMAPAdapter, emailProvider domain.EmailSenderAdapter, fromName string) *MailService {
+	return &MailService{imap: imap, emailProvider: emailProvider, fromName: fromName}
 }
 
 func (s *MailService) ListFolders(addr, password string) ([]*domain.MailFolder, error) {
@@ -46,7 +47,13 @@ func (s *MailService) Compose(req domain.ComposeRequest) error {
 	if req.From == "" {
 		req.From = fmt.Sprintf("%s <%s>", s.fromName, req.MailboxAddress)
 	}
-	return s.smtp.Send(req)
+	return s.emailProvider.SendTransactionalEmail(context.Background(), domain.SendEmailRequest{
+		To:      req.To,
+		Subject: req.Subject,
+		Body:    req.Body,
+		IsHTML:  req.IsHTML,
+		From:    &domain.EmailAddress{Email: req.MailboxAddress, Name: s.fromName},
+	})
 }
 
 func (s *MailService) Reply(req domain.ComposeRequest) error {
@@ -56,7 +63,13 @@ func (s *MailService) Reply(req domain.ComposeRequest) error {
 	if !hasRePrefix(req.Subject) {
 		req.Subject = "Re: " + req.Subject
 	}
-	return s.smtp.Send(req)
+	return s.emailProvider.SendTransactionalEmail(context.Background(), domain.SendEmailRequest{
+		To:      req.To,
+		Subject: req.Subject,
+		Body:    req.Body,
+		IsHTML:  req.IsHTML,
+		From:    &domain.EmailAddress{Email: req.MailboxAddress, Name: s.fromName},
+	})
 }
 
 func hasRePrefix(s string) bool {

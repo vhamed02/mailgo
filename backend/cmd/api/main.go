@@ -28,7 +28,6 @@ import (
 	"github.com/mailgo/backend/internal/infrastructure/postgres"
 	"github.com/mailgo/backend/internal/infrastructure/queue"
 	rediscache "github.com/mailgo/backend/internal/infrastructure/redis"
-	smtpinfra "github.com/mailgo/backend/internal/infrastructure/smtp"
 )
 
 func main() {
@@ -87,15 +86,7 @@ func main() {
 	}
 	imapAdapter := imapinfra.NewAdapter(getEnv("IMAP_HOST", "mailcow"), imapPort, imapTLS)
 
-	smtpPort := 587
-	if p := getEnv("SMTP_PORT", ""); p != "" {
-		if v, err := strconv.Atoi(p); err == nil {
-			smtpPort = v
-		}
-	}
-	smtpAdapter := smtpinfra.NewAdapter(getEnv("SMTP_HOST", "mailcow"), smtpPort)
-
-	mailService := application.NewMailService(imapAdapter, smtpAdapter, getEnv("BREVO_FROM_NAME", "MailGo"))
+	mailService := application.NewMailService(imapAdapter, emailSenderAdapter, getEnv("BREVO_FROM_NAME", "MailGo"))
 
 	// Initialize repositories
 	userRepo := postgres.NewUserRepository(db)
