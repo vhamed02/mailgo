@@ -286,7 +286,7 @@ function WebmailApp({ mailboxes, initialMailbox, password }: {
             <div className="flex items-start justify-between mb-6">
               <div className="flex-1 min-w-0">
                 <h2 className="text-xl font-bold text-gray-900 mb-3">{full.subject || '(no subject)'}</h2>
-                <div className="text-sm text-gray-600 space-y-1">
+                <div className="text-sm text-gray-600 space-y-1 pl-4">
                   <div><span className="text-gray-400 w-12 inline-block">From</span>{full.from}</div>
                   <div><span className="text-gray-400 w-12 inline-block">To</span>{full.to?.join(', ')}</div>
                   {full.cc?.length > 0 && <div><span className="text-gray-400 w-12 inline-block">CC</span>{full.cc.join(', ')}</div>}
