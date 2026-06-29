@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	imap "github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
@@ -221,6 +222,50 @@ func (a *Adapter) MarkRead(addr, password, folder string, uid uint32, read bool)
 		Flags:  []imap.Flag{"\\Seen"},
 	}, nil)
 	return cmd.Close()
+}
+
+func (a *Adapter) AppendSent(addr, password string, req domain.ComposeRequest) error {
+	c, err := a.connect(addr, password)
+	if err != nil {
+		return err
+	}
+	defer c.Logout()
+
+	var buf strings.Builder
+	buf.WriteString(fmt.Sprintf("From: %s\r\n", req.From))
+	buf.WriteString(fmt.Sprintf("To: %s\r\n", strings.Join(req.To, ", ")))
+	if len(req.CC) > 0 {
+		buf.WriteString(fmt.Sprintf("Cc: %s\r\n", strings.Join(req.CC, ", ")))
+	}
+	buf.WriteString(fmt.Sprintf("Subject: %s\r\n", req.Subject))
+	buf.WriteString(fmt.Sprintf("Date: %s\r\n", time.Now().Format(time.RFC1123Z)))
+	buf.WriteString("MIME-Version: 1.0\r\n")
+	if req.InReplyTo != "" {
+		buf.WriteString(fmt.Sprintf("In-Reply-To: %s\r\n", req.InReplyTo))
+	}
+	if req.IsHTML {
+		buf.WriteString("Content-Type: text/html; charset=UTF-8\r\n")
+	} else {
+		buf.WriteString("Content-Type: text/plain; charset=UTF-8\r\n")
+	}
+	buf.WriteString("\r\n")
+	buf.WriteString(req.Body)
+
+	raw := []byte(buf.String())
+
+	appendCmd := c.Append("Sent", int64(len(raw)), &imap.AppendOptions{
+		Flags: []imap.Flag{"\\Seen"},
+		Time:  time.Now(),
+	})
+	if _, err := appendCmd.Write(raw); err != nil {
+		appendCmd.Close()
+		return fmt.Errorf("imap append write: %w", err)
+	}
+	if err := appendCmd.Close(); err != nil {
+		return fmt.Errorf("imap append close: %w", err)
+	}
+	_, err = appendCmd.Wait()
+	return err
 }
 
 func (a *Adapter) MoveToTrash(addr, password, folder string, uid uint32) error {

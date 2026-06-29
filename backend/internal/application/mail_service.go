@@ -47,13 +47,17 @@ func (s *MailService) Compose(req domain.ComposeRequest) error {
 	if req.From == "" {
 		req.From = fmt.Sprintf("%s <%s>", s.fromName, req.MailboxAddress)
 	}
-	return s.emailProvider.SendTransactionalEmail(context.Background(), domain.SendEmailRequest{
+	if err := s.emailProvider.SendTransactionalEmail(context.Background(), domain.SendEmailRequest{
 		To:      req.To,
 		Subject: req.Subject,
 		Body:    req.Body,
 		IsHTML:  req.IsHTML,
 		From:    &domain.EmailAddress{Email: req.MailboxAddress, Name: s.fromName},
-	})
+	}); err != nil {
+		return err
+	}
+	_ = s.imap.AppendSent(req.MailboxAddress, req.MailboxPassword, req)
+	return nil
 }
 
 func (s *MailService) Reply(req domain.ComposeRequest) error {
@@ -63,13 +67,17 @@ func (s *MailService) Reply(req domain.ComposeRequest) error {
 	if !hasRePrefix(req.Subject) {
 		req.Subject = "Re: " + req.Subject
 	}
-	return s.emailProvider.SendTransactionalEmail(context.Background(), domain.SendEmailRequest{
+	if err := s.emailProvider.SendTransactionalEmail(context.Background(), domain.SendEmailRequest{
 		To:      req.To,
 		Subject: req.Subject,
 		Body:    req.Body,
 		IsHTML:  req.IsHTML,
 		From:    &domain.EmailAddress{Email: req.MailboxAddress, Name: s.fromName},
-	})
+	}); err != nil {
+		return err
+	}
+	_ = s.imap.AppendSent(req.MailboxAddress, req.MailboxPassword, req)
+	return nil
 }
 
 func hasRePrefix(s string) bool {

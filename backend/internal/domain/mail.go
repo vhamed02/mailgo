@@ -43,6 +43,7 @@ type IMAPAdapter interface {
 	GetMessage(addr, password, folder string, uid uint32) (*MailMessage, error)
 	MarkRead(addr, password, folder string, uid uint32, read bool) error
 	MoveToTrash(addr, password, folder string, uid uint32) error
+	AppendSent(addr, password string, req ComposeRequest) error
 }
 
 type SMTPAdapter interface {
