@@ -261,10 +261,14 @@ func (a *Adapter) AppendSent(addr, password string, req domain.ComposeRequest) e
 	}
 	if req.InReplyTo != "" {
 		buf.WriteString(fmt.Sprintf("In-Reply-To: %s\r\n", req.InReplyTo))
-		buf.WriteString(fmt.Sprintf("References: %s\r\n", req.InReplyTo))
 	}
-	if req.References != "" {
-		buf.WriteString(fmt.Sprintf("References: %s\r\n", req.References))
+	// Use explicit References if provided, otherwise fall back to InReplyTo alone.
+	refs := req.References
+	if refs == "" {
+		refs = req.InReplyTo
+	}
+	if refs != "" {
+		buf.WriteString(fmt.Sprintf("References: %s\r\n", refs))
 	}
 	if req.IsHTML {
 		buf.WriteString("Content-Type: text/html; charset=UTF-8\r\n")

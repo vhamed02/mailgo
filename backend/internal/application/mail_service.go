@@ -4,11 +4,8 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
-<<<<<<< Updated upstream
 	"log"
 	"net/mail"
-=======
->>>>>>> Stashed changes
 	"strings"
 
 	"github.com/mailgo/backend/internal/domain"
@@ -52,8 +49,6 @@ func NewMailService(imap domain.IMAPAdapter, emailProvider domain.EmailSenderAda
 }
 
 // generateMessageID creates a fresh RFC 2822 Message-ID for every new message.
-// Each reply is a brand-new, first-class message — it never mutates an older
-// message and never becomes a child of anything.
 func generateMessageID(sendDomain string) string {
 	if sendDomain == "" {
 		sendDomain = "mailgo.local"
@@ -70,7 +65,6 @@ func buildReferences(prevRefs, prevMessageID string) string {
 	if prevMessageID != "" {
 		parts = append(parts, prevMessageID)
 	}
-	// De-duplicate while preserving order.
 	seen := make(map[string]bool, len(parts))
 	out := make([]string, 0, len(parts))
 	for _, p := range parts {
@@ -139,25 +133,20 @@ func (s *MailService) Reply(req domain.ComposeRequest) error {
 	if !hasRePrefix(req.Subject) {
 		req.Subject = "Re: " + req.Subject
 	}
-<<<<<<< Updated upstream
 
 	log.Printf("[Reply] raw To: %v", req.To)
 	req.To = normalizeEmailList(req.To)
 	req.CC = normalizeEmailList(req.CC)
 	log.Printf("[Reply] normalized To: %v", req.To)
 
-=======
-	// Each reply is a NEW message joining the same flat thread (siblings).
-	// Generate a fresh Message-ID and extend the References chain.
+	// Generate a fresh Message-ID for this reply and build the References chain.
 	if req.MessageID == "" {
 		req.MessageID = generateMessageID(s.domain)
 	}
 	if req.InReplyTo != "" && req.References == "" {
-		// Caller supplied only In-Reply-To (prev Message-ID): rebuild References
-		// as prev References + prev Message-ID.
 		req.References = buildReferences("", req.InReplyTo)
 	}
->>>>>>> Stashed changes
+
 	if err := s.emailProvider.SendTransactionalEmail(context.Background(), domain.SendEmailRequest{
 		To:        req.To,
 		Subject:   req.Subject,
