@@ -139,7 +139,7 @@ func (a *Adapter) GetMessage(addr, password, folder string, uid uint32) (*domain
 		return nil, fmt.Errorf("imap select: %w", err)
 	}
 
-	seqSet := imap.SeqSetNum(uid)
+	seqSet := imap.UIDSetNum(imap.UID(uid))
 	bodySec := &imap.FetchItemBodySection{}
 
 	msgs, err := c.Fetch(seqSet, &imap.FetchOptions{
@@ -232,7 +232,7 @@ func (a *Adapter) MarkRead(addr, password, folder string, uid uint32, read bool)
 		op = imap.StoreFlagsAdd
 	}
 
-	cmd := c.Store(imap.SeqSetNum(uid), &imap.StoreFlags{
+	cmd := c.Store(imap.UIDSetNum(imap.UID(uid)), &imap.StoreFlags{
 		Op:     op,
 		Silent: true,
 		Flags:  []imap.Flag{"\\Seen"},
@@ -306,7 +306,7 @@ func (a *Adapter) MoveToTrash(addr, password, folder string, uid uint32) error {
 		return err
 	}
 
-	_, err = c.Move(imap.SeqSetNum(uid), "Trash").Wait()
+	_, err = c.Move(imap.UIDSetNum(imap.UID(uid)), "Trash").Wait()
 	return err
 }
 
