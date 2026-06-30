@@ -207,8 +207,17 @@ function MessageView({ msg, onReply, compact }: {
       </div>
       <div className="border-t border-gray-100 pt-4">
         {msg.body_html ? (
-          <iframe srcDoc={msg.body_html} sandbox="allow-same-origin" className="w-full border-0 rounded-lg"
-            style={{ minHeight: compact ? '30vh' : '55vh' }} title="email" />
+          <iframe
+            srcDoc={msg.body_html}
+            sandbox="allow-same-origin"
+            className="w-full border-0 rounded-lg block"
+            style={{ height: '0px' }}
+            title="email"
+            onLoad={e => {
+              const f = e.currentTarget
+              f.style.height = f.contentDocument?.documentElement?.scrollHeight + 'px'
+            }}
+          />
         ) : (
           <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans leading-relaxed">{msg.body_text}</pre>
         )}
