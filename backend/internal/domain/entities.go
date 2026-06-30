@@ -108,9 +108,10 @@ type Mailbox struct {
 	DisplayName    string         `json:"display_name"`
 	Status         MailboxStatus  `json:"status"`
 	QuotaBytes     int64          `json:"quota_bytes"`
-	UsedBytes      int64          `json:"used_bytes"`
-	PasswordHash   string         `json:"-"`
-	CreatedAt      time.Time      `json:"created_at"`
+	UsedBytes         int64          `json:"used_bytes"`
+	PasswordHash      string         `json:"-"`
+	PasswordEncrypted string         `json:"-"`
+	CreatedAt         time.Time      `json:"created_at"`
 	UpdatedAt      time.Time      `json:"updated_at"`
 	SuspendedAt    *time.Time     `json:"suspended_at,omitempty"`
 }

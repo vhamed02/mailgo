@@ -23,6 +23,7 @@ import (
 	restmiddleware "github.com/mailgo/backend/internal/api/rest/middleware"
 	"github.com/mailgo/backend/internal/application"
 	"github.com/mailgo/backend/internal/infrastructure/brevo"
+	"github.com/mailgo/backend/internal/infrastructure/encryption"
 	imapinfra "github.com/mailgo/backend/internal/infrastructure/imap"
 	"github.com/mailgo/backend/internal/infrastructure/mailcow"
 	"github.com/mailgo/backend/internal/infrastructure/postgres"
@@ -74,6 +75,17 @@ func main() {
 
 	queueAdapter := queue.NewAdapter(redisClient)
 
+	var encService *encryption.Service
+	if encKey := getEnv("MAILBOX_PASSWORD_ENCRYPTION_KEY", ""); encKey != "" {
+		var err error
+		encService, err = encryption.NewService(encKey)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to initialize mailbox password encryption")
+		}
+	} else {
+		log.Warn().Msg("MAILBOX_PASSWORD_ENCRYPTION_KEY is not set; session-based webmail access is disabled")
+	}
+
 	imapPort := 993
 	imapTLS := true
 	if p := getEnv("IMAP_PORT", ""); p != "" {
@@ -123,6 +135,7 @@ func main() {
 		mailServerAdapter,
 		cacheAdapter,
 		queueAdapter,
+		encService,
 	)
 
 	domainService := application.NewDomainService(
@@ -201,6 +214,7 @@ func main() {
 	protected.GET("/mailboxes", mailboxHandler.List)
 	protected.POST("/mailboxes", mailboxHandler.Create)
 	protected.GET("/mailboxes/:id", mailboxHandler.Get)
+	protected.GET("/mailboxes/:id/webmail-password", mailboxHandler.WebmailPassword)
 	protected.PATCH("/mailboxes/:id", mailboxHandler.Update)
 	protected.DELETE("/mailboxes/:id", mailboxHandler.Delete)
 	protected.POST("/mailboxes/:id/suspend", mailboxHandler.Suspend)
@@ -355,6 +369,7 @@ func runMigrations(db *pgxpool.Pool) error {
 		{"000002_domain_email_setup", "migrations/000002_domain_email_setup.up.sql"},
 		{"000003_domain_dns_records", "migrations/000003_domain_dns_records.up.sql"},
 		{"000004_domain_mx_record", "migrations/000004_domain_mx_record.up.sql"},
+		{"000005_add_mailbox_password_encrypted", "migrations/000005_add_mailbox_password_encrypted.up.sql"},
 	}
 
 	for _, m := range migrations {

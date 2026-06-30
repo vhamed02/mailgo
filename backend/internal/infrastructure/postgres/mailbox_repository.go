@@ -21,10 +21,10 @@ func NewMailboxRepository(db *pgxpool.Pool) *MailboxRepository {
 func (r *MailboxRepository) Create(ctx context.Context, mailbox *domain.Mailbox) error {
 	query := `
 		INSERT INTO mailboxes (
-			id, organization_id, domain_id, email, local_part, 
+			id, organization_id, domain_id, email, local_part,
 			display_name, status, quota_bytes, used_bytes, password_hash,
-			created_at, updated_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+			password_encrypted, created_at, updated_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`
 
 	_, err := r.db.Exec(ctx, query,
@@ -38,6 +38,7 @@ func (r *MailboxRepository) Create(ctx context.Context, mailbox *domain.Mailbox)
 		mailbox.QuotaBytes,
 		mailbox.UsedBytes,
 		mailbox.PasswordHash,
+		mailbox.PasswordEncrypted,
 		mailbox.CreatedAt,
 		mailbox.UpdatedAt,
 	)
@@ -47,15 +48,15 @@ func (r *MailboxRepository) Create(ctx context.Context, mailbox *domain.Mailbox)
 
 func (r *MailboxRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Mailbox, error) {
 	query := `
-		SELECT id, organization_id, domain_id, email, local_part, 
+		SELECT id, organization_id, domain_id, email, local_part,
 		       display_name, status, quota_bytes, used_bytes, password_hash,
-		       created_at, updated_at, suspended_at
+		       password_encrypted, created_at, updated_at, suspended_at
 		FROM mailboxes
 		WHERE id = $1
 	`
 
 	mailbox := &domain.Mailbox{}
-	err := r.db.QueryRow(ctx, query, id).Scan(
+		err := r.db.QueryRow(ctx, query, id).Scan(
 		&mailbox.ID,
 		&mailbox.OrganizationID,
 		&mailbox.DomainID,
@@ -66,6 +67,7 @@ func (r *MailboxRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.
 		&mailbox.QuotaBytes,
 		&mailbox.UsedBytes,
 		&mailbox.PasswordHash,
+		&mailbox.PasswordEncrypted,
 		&mailbox.CreatedAt,
 		&mailbox.UpdatedAt,
 		&mailbox.SuspendedAt,
@@ -83,15 +85,15 @@ func (r *MailboxRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.
 
 func (r *MailboxRepository) GetByEmail(ctx context.Context, email string) (*domain.Mailbox, error) {
 	query := `
-		SELECT id, organization_id, domain_id, email, local_part, 
+		SELECT id, organization_id, domain_id, email, local_part,
 		       display_name, status, quota_bytes, used_bytes, password_hash,
-		       created_at, updated_at, suspended_at
+		       password_encrypted, created_at, updated_at, suspended_at
 		FROM mailboxes
 		WHERE email = $1
 	`
 
 	mailbox := &domain.Mailbox{}
-	err := r.db.QueryRow(ctx, query, email).Scan(
+		err := r.db.QueryRow(ctx, query, email).Scan(
 		&mailbox.ID,
 		&mailbox.OrganizationID,
 		&mailbox.DomainID,
@@ -102,6 +104,7 @@ func (r *MailboxRepository) GetByEmail(ctx context.Context, email string) (*doma
 		&mailbox.QuotaBytes,
 		&mailbox.UsedBytes,
 		&mailbox.PasswordHash,
+		&mailbox.PasswordEncrypted,
 		&mailbox.CreatedAt,
 		&mailbox.UpdatedAt,
 		&mailbox.SuspendedAt,
@@ -119,9 +122,9 @@ func (r *MailboxRepository) GetByEmail(ctx context.Context, email string) (*doma
 
 func (r *MailboxRepository) ListByOrganization(ctx context.Context, orgID uuid.UUID) ([]*domain.Mailbox, error) {
 	query := `
-		SELECT id, organization_id, domain_id, email, local_part, 
+		SELECT id, organization_id, domain_id, email, local_part,
 		       display_name, status, quota_bytes, used_bytes, password_hash,
-		       created_at, updated_at, suspended_at
+		       password_encrypted, created_at, updated_at, suspended_at
 		FROM mailboxes
 		WHERE organization_id = $1 AND status != 'deleted'
 		ORDER BY created_at DESC
@@ -147,6 +150,7 @@ func (r *MailboxRepository) ListByOrganization(ctx context.Context, orgID uuid.U
 			&mailbox.QuotaBytes,
 			&mailbox.UsedBytes,
 			&mailbox.PasswordHash,
+			&mailbox.PasswordEncrypted,
 			&mailbox.CreatedAt,
 			&mailbox.UpdatedAt,
 			&mailbox.SuspendedAt,
@@ -162,9 +166,9 @@ func (r *MailboxRepository) ListByOrganization(ctx context.Context, orgID uuid.U
 
 func (r *MailboxRepository) ListByDomain(ctx context.Context, domainID uuid.UUID) ([]*domain.Mailbox, error) {
 	query := `
-		SELECT id, organization_id, domain_id, email, local_part, 
+		SELECT id, organization_id, domain_id, email, local_part,
 		       display_name, status, quota_bytes, used_bytes, password_hash,
-		       created_at, updated_at, suspended_at
+		       password_encrypted, created_at, updated_at, suspended_at
 		FROM mailboxes
 		WHERE domain_id = $1 AND status != 'deleted'
 		ORDER BY created_at DESC
@@ -190,6 +194,7 @@ func (r *MailboxRepository) ListByDomain(ctx context.Context, domainID uuid.UUID
 			&mailbox.QuotaBytes,
 			&mailbox.UsedBytes,
 			&mailbox.PasswordHash,
+			&mailbox.PasswordEncrypted,
 			&mailbox.CreatedAt,
 			&mailbox.UpdatedAt,
 			&mailbox.SuspendedAt,
@@ -207,8 +212,8 @@ func (r *MailboxRepository) Update(ctx context.Context, mailbox *domain.Mailbox)
 	query := `
 		UPDATE mailboxes
 		SET display_name = $1, status = $2, quota_bytes = $3, used_bytes = $4,
-		    password_hash = $5, suspended_at = $6, updated_at = $7
-		WHERE id = $8
+		    password_hash = $5, password_encrypted = $6, suspended_at = $7, updated_at = $8
+		WHERE id = $9
 	`
 
 	_, err := r.db.Exec(ctx, query,
@@ -217,6 +222,7 @@ func (r *MailboxRepository) Update(ctx context.Context, mailbox *domain.Mailbox)
 		mailbox.QuotaBytes,
 		mailbox.UsedBytes,
 		mailbox.PasswordHash,
+		mailbox.PasswordEncrypted,
 		mailbox.SuspendedAt,
 		mailbox.UpdatedAt,
 		mailbox.ID,

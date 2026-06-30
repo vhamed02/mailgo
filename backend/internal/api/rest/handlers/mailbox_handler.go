@@ -164,6 +164,29 @@ func (h *MailboxHandler) Get(c echo.Context) error {
 	return c.JSON(http.StatusOK, mailbox)
 }
 
+// WebmailPassword returns the decrypted IMAP password for a mailbox owned by
+// the authenticated organization. The webmail client uses this to sign in
+// automatically while the dashboard session is active.
+// GET /api/v1/mailboxes/:id/webmail-password
+func (h *MailboxHandler) WebmailPassword(c echo.Context) error {
+	orgID, err := h.orgID(c)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": err.Error()})
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid mailbox id"})
+	}
+
+	password, err := h.service.GetMailboxPassword(c.Request().Context(), id, orgID)
+	if err != nil {
+		return mailboxError(c, err)
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"password": password})
+}
+
 // Update partially updates a mailbox (display name, password, quota).
 // PATCH /api/v1/mailboxes/:id
 func (h *MailboxHandler) Update(c echo.Context) error {

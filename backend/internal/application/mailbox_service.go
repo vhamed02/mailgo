@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/mailgo/backend/internal/domain"
+	"github.com/mailgo/backend/internal/infrastructure/encryption"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -18,6 +19,7 @@ type MailboxService struct {
 	mailServer  domain.MailServerAdapter
 	cache       domain.CacheAdapter
 	queue       domain.QueueAdapter
+	enc         *encryption.Service
 }
 
 const mailboxProvisionPasswordTTL = 30 * time.Minute
@@ -30,6 +32,7 @@ func NewMailboxService(
 	mailServer domain.MailServerAdapter,
 	cache domain.CacheAdapter,
 	queue domain.QueueAdapter,
+	enc *encryption.Service,
 ) *MailboxService {
 	return &MailboxService{
 		mailboxRepo: mailboxRepo,
@@ -39,7 +42,14 @@ func NewMailboxService(
 		mailServer:  mailServer,
 		cache:       cache,
 		queue:       queue,
+		enc:         enc,
 	}
+}
+
+// WithEncryption allows overriding the encryption service (useful in tests).
+func (s *MailboxService) WithEncryption(enc *encryption.Service) *MailboxService {
+	s.enc = enc
+	return s
 }
 
 type CreateMailboxRequest struct {
@@ -118,20 +128,30 @@ func (s *MailboxService) CreateMailbox(ctx context.Context, req CreateMailboxReq
 		return nil, err
 	}
 
+	// Encrypt password so the active session can unlock webmail later.
+	var passwordEncrypted string
+	if s.enc != nil {
+		passwordEncrypted, err = s.enc.Encrypt(req.Password)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encrypt mailbox password: %w", err)
+		}
+	}
+
 	// Create mailbox entity
 	mailbox := &domain.Mailbox{
-		ID:             uuid.New(),
-		OrganizationID: req.OrganizationID,
-		DomainID:       req.DomainID,
-		Email:          email,
-		LocalPart:      req.LocalPart,
-		DisplayName:    req.DisplayName,
-		Status:         domain.MailboxStatusActive,
-		QuotaBytes:     req.QuotaBytes,
-		UsedBytes:      0,
-		PasswordHash:   string(passwordHash),
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
+		ID:                uuid.New(),
+		OrganizationID:    req.OrganizationID,
+		DomainID:          req.DomainID,
+		Email:             email,
+		LocalPart:         req.LocalPart,
+		DisplayName:       req.DisplayName,
+		Status:            domain.MailboxStatusActive,
+		QuotaBytes:        req.QuotaBytes,
+		UsedBytes:         0,
+		PasswordHash:      string(passwordHash),
+		PasswordEncrypted: passwordEncrypted,
+		CreatedAt:         time.Now(),
+		UpdatedAt:         time.Now(),
 	}
 
 	passwordKey := fmt.Sprintf("mailbox:provision:%s:password", mailbox.ID.String())
@@ -196,6 +216,30 @@ func (s *MailboxService) GetMailbox(ctx context.Context, id uuid.UUID, orgID uui
 	return mailbox, nil
 }
 
+// GetMailboxPassword returns the plaintext IMAP password for a mailbox when the
+// caller has a valid session for the owning organization. It is used by the
+// webmail client so users don't have to re-enter the mailbox password.
+func (s *MailboxService) GetMailboxPassword(ctx context.Context, id uuid.UUID, orgID uuid.UUID) (string, error) {
+	if s.enc == nil {
+		return "", fmt.Errorf("mailbox password encryption is not configured")
+	}
+
+	mailbox, err := s.mailboxRepo.GetByID(ctx, id)
+	if err != nil {
+		return "", err
+	}
+
+	if mailbox.OrganizationID != orgID {
+		return "", domain.ErrForbidden
+	}
+
+	if mailbox.PasswordEncrypted == "" {
+		return "", domain.ErrNotFound
+	}
+
+	return s.enc.Decrypt(mailbox.PasswordEncrypted)
+}
+
 // ListMailboxes lists all mailboxes for an organization with live usage stats.
 func (s *MailboxService) ListMailboxes(ctx context.Context, orgID uuid.UUID) ([]*domain.Mailbox, error) {
 	mailboxes, err := s.mailboxRepo.ListByOrganization(ctx, orgID)
@@ -240,6 +284,12 @@ func (s *MailboxService) UpdateMailbox(ctx context.Context, req UpdateMailboxReq
 			return nil, err
 		}
 		mailbox.PasswordHash = string(passwordHash)
+		if s.enc != nil {
+			mailbox.PasswordEncrypted, err = s.enc.Encrypt(*req.Password)
+			if err != nil {
+				return nil, fmt.Errorf("failed to encrypt mailbox password: %w", err)
+			}
+		}
 	}
 
 	mailbox.UpdatedAt = time.Now()

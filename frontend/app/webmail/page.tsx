@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createMailClient, type MailFolder, type MailMessage, type ComposePayload } from '@/lib/mail-api'
+import { mailboxApi } from '@/lib/api-client'
 
 function formatDate(d: string) {
   const date = new Date(d)
@@ -37,9 +38,9 @@ type Conversation = {
   latest: MailMessage
 }
 
-function UnlockScreen({ mailbox, onUnlock }: { mailbox: string; onUnlock: (p: string) => void }) {
+function UnlockScreen({ mailbox, onUnlock, error: initialError = '' }: { mailbox: string; onUnlock: (p: string) => void; error?: string }) {
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const [error, setError] = useState(initialError)
   const [loading, setLoading] = useState(false)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setLoading(true); setError('')
@@ -540,20 +541,42 @@ function WebmailApp({ mailboxes, initialMailbox, password }: {
 function WebmailPageInner() {
   const params = useSearchParams()
   const [password, setPassword] = useState<string | null>(null)
+  const [loadingSession, setLoadingSession] = useState(false)
+  const [sessionError, setSessionError] = useState('')
   const [allMailboxes, setAllMailboxes] = useState<string[]>([])
   const mailbox = params.get('mailbox') || ''
+  const mailboxId = params.get('id') || ''
 
   useEffect(() => {
     const stored = sessionStorage.getItem(`mailbox_pass_${mailbox}`)
-    if (stored) setPassword(stored)
+    if (stored) {
+      setPassword(stored)
+    } else if (mailboxId) {
+      setLoadingSession(true)
+      setSessionError('')
+      mailboxApi.getWebmailPassword(mailboxId)
+        .then(p => {
+          sessionStorage.setItem(`mailbox_pass_${mailbox}`, p)
+          setPassword(p)
+        })
+        .catch(() => setSessionError('Session access unavailable. Please enter the mailbox password.'))
+        .finally(() => setLoadingSession(false))
+    }
     try {
       const raw = sessionStorage.getItem('webmail_mailboxes')
       setAllMailboxes(raw ? JSON.parse(raw) : mailbox ? [mailbox] : [])
     } catch { if (mailbox) setAllMailboxes([mailbox]) }
-  }, [mailbox])
+  }, [mailbox, mailboxId])
 
   if (!mailbox) return <div className="min-h-screen flex items-center justify-center text-gray-500 text-sm">No mailbox specified.</div>
-  if (!password) return <UnlockScreen mailbox={mailbox} onUnlock={p => { sessionStorage.setItem(`mailbox_pass_${mailbox}`, p); setPassword(p) }} />
+  if (loadingSession) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin w-6 h-6 rounded-full border-2 border-blue-600 border-t-transparent" /></div>
+  if (!password) return (
+    <UnlockScreen
+      mailbox={mailbox}
+      error={sessionError}
+      onUnlock={p => { sessionStorage.setItem(`mailbox_pass_${mailbox}`, p); setPassword(p); setSessionError('') }}
+    />
+  )
   return <WebmailApp mailboxes={allMailboxes.length > 0 ? allMailboxes : [mailbox]} initialMailbox={mailbox} password={password} />
 }
 

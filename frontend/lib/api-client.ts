@@ -113,6 +113,11 @@ export const mailboxApi = {
     const response = await apiClient.post(`/mailboxes/${id}/unsuspend`)
     return response.data
   },
+
+  getWebmailPassword: async (id: string) => {
+    const response = await apiClient.get(`/mailboxes/${id}/webmail-password`)
+    return response.data.password as string
+  },
 }
 
 // Domain API
