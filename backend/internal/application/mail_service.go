@@ -132,6 +132,12 @@ func (s *MailService) Compose(req domain.ComposeRequest) error {
 	req.CC = normalizeEmailList(req.CC)
 	log.Printf("[Compose] normalized To: %v", req.To)
 
+	// Generate a fresh Message-ID for every outbound message so the Sent copy
+	// can be deduplicated and threaded reliably.
+	if req.MessageID == "" {
+		req.MessageID = generateMessageID(s.domain)
+	}
+
 	if err := s.emailProvider.SendTransactionalEmail(context.Background(), domain.SendEmailRequest{
 		To:        req.To,
 		Subject:   req.Subject,

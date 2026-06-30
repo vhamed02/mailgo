@@ -326,11 +326,13 @@ function WebmailApp({ mailboxes, initialMailbox, password }: {
 
       // Also pull sent replies for this thread from the Sent folder so replies
       // appear in the conversation after a page refresh (Gmail-like behaviour).
+      // Skip when the current folder already *is* Sent to avoid duplicating the
+      // messages we are already viewing.
       try {
         const sentFolder = folders.find(f =>
           f.display_name === 'Sent' || f.name.toUpperCase() === 'SENT'
         )
-        if (sentFolder) {
+        if (sentFolder && sentFolder.name !== activeFolder) {
           const sentRes = await client.listMessages(sentFolder.name, 1, 100)
           const threadMids = new Set<string>()
           for (const m of [...ordered, ...fulls]) {
@@ -345,12 +347,17 @@ function WebmailApp({ mailboxes, initialMailbox, password }: {
           const sentFulls = await Promise.all(
             sentMatches.map(m => client.getMessage(m.uid, sentFolder.name))
           )
-          // Merge, deduplicate by message_id, sort by date.
-          const seen = new Set(fulls.map(m => m.message_id).filter(Boolean))
+          // Merge and deduplicate. Some providers do not assign a Message-ID
+          // to the Sent copy, so fall back to folder + uid for uniqueness.
+          const seen = new Set<string>()
+          for (const m of fulls) {
+            seen.add(m.message_id ? `mid:${m.message_id}` : `${m.folder}:${m.uid}`)
+          }
           for (const m of sentFulls) {
-            if (!m.message_id || !seen.has(m.message_id)) {
+            const key = m.message_id ? `mid:${m.message_id}` : `${m.folder}:${m.uid}`
+            if (!seen.has(key)) {
               fulls.push(m)
-              if (m.message_id) seen.add(m.message_id)
+              seen.add(key)
             }
           }
         }
