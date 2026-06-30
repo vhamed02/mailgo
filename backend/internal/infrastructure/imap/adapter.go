@@ -113,6 +113,7 @@ func (a *Adapter) ListMessages(addr, password, folder string, page, limit int) (
 			m.Subject = msg.Envelope.Subject
 			m.Date = msg.Envelope.Date
 			m.MessageID = msg.Envelope.MessageID
+			m.InReplyTo = strings.Join(msg.Envelope.InReplyTo, " ")
 			if len(msg.Envelope.From) > 0 {
 				m.From = formatAddress(msg.Envelope.From[0])
 			}
@@ -162,6 +163,7 @@ func (a *Adapter) GetMessage(addr, password, folder string, uid uint32) (*domain
 		m.Subject = msg.Envelope.Subject
 		m.Date = msg.Envelope.Date
 		m.MessageID = msg.Envelope.MessageID
+		m.InReplyTo = strings.Join(msg.Envelope.InReplyTo, " ")
 		if len(msg.Envelope.From) > 0 {
 			m.From = formatAddress(msg.Envelope.From[0])
 		}
@@ -176,6 +178,20 @@ func (a *Adapter) GetMessage(addr, password, folder string, uid uint32) (*domain
 	if raw := msg.FindBodySection(bodySec); raw != nil {
 		mr, err := mail.CreateReader(strings.NewReader(string(raw)))
 		if err == nil {
+			// RFC threading headers live on the top-level message header.
+			if refs := mr.Header.Get("References"); refs != "" {
+				m.References = refs
+			}
+			if m.InReplyTo == "" {
+				if irt := mr.Header.Get("In-Reply-To"); irt != "" {
+					m.InReplyTo = irt
+				}
+			}
+			if m.MessageID == "" {
+				if mid := mr.Header.Get("Message-Id"); mid != "" {
+					m.MessageID = mid
+				}
+			}
 			for {
 				part, err := mr.NextPart()
 				if err != nil {
@@ -240,9 +256,15 @@ func (a *Adapter) AppendSent(addr, password string, req domain.ComposeRequest) e
 	buf.WriteString(fmt.Sprintf("Subject: %s\r\n", req.Subject))
 	buf.WriteString(fmt.Sprintf("Date: %s\r\n", time.Now().Format(time.RFC1123Z)))
 	buf.WriteString("MIME-Version: 1.0\r\n")
+	if req.MessageID != "" {
+		buf.WriteString(fmt.Sprintf("Message-ID: %s\r\n", req.MessageID))
+	}
 	if req.InReplyTo != "" {
 		buf.WriteString(fmt.Sprintf("In-Reply-To: %s\r\n", req.InReplyTo))
 		buf.WriteString(fmt.Sprintf("References: %s\r\n", req.InReplyTo))
+	}
+	if req.References != "" {
+		buf.WriteString(fmt.Sprintf("References: %s\r\n", req.References))
 	}
 	if req.IsHTML {
 		buf.WriteString("Content-Type: text/html; charset=UTF-8\r\n")

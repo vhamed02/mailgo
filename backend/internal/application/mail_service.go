@@ -2,9 +2,13 @@ package application
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
+<<<<<<< Updated upstream
 	"log"
 	"net/mail"
+=======
+>>>>>>> Stashed changes
 	"strings"
 
 	"github.com/mailgo/backend/internal/domain"
@@ -40,10 +44,42 @@ type MailService struct {
 	imap          domain.IMAPAdapter
 	emailProvider domain.EmailSenderAdapter
 	fromName      string
+	domain        string
 }
 
-func NewMailService(imap domain.IMAPAdapter, emailProvider domain.EmailSenderAdapter, fromName string) *MailService {
-	return &MailService{imap: imap, emailProvider: emailProvider, fromName: fromName}
+func NewMailService(imap domain.IMAPAdapter, emailProvider domain.EmailSenderAdapter, fromName, sendDomain string) *MailService {
+	return &MailService{imap: imap, emailProvider: emailProvider, fromName: fromName, domain: sendDomain}
+}
+
+// generateMessageID creates a fresh RFC 2822 Message-ID for every new message.
+// Each reply is a brand-new, first-class message — it never mutates an older
+// message and never becomes a child of anything.
+func generateMessageID(sendDomain string) string {
+	if sendDomain == "" {
+		sendDomain = "mailgo.local"
+	}
+	var b [16]byte
+	_, _ = rand.Read(b[:])
+	return fmt.Sprintf("<%x.%x@%s>", b[:8], b[8:], sendDomain)
+}
+
+// buildReferences produces the References header for a reply:
+// previous References + previous Message-ID (RFC 5322 §3.6.4).
+func buildReferences(prevRefs, prevMessageID string) string {
+	parts := strings.Fields(prevRefs)
+	if prevMessageID != "" {
+		parts = append(parts, prevMessageID)
+	}
+	// De-duplicate while preserving order.
+	seen := make(map[string]bool, len(parts))
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if !seen[p] {
+			seen[p] = true
+			out = append(out, p)
+		}
+	}
+	return strings.Join(out, " ")
 }
 
 func (s *MailService) ListFolders(addr, password string) ([]*domain.MailFolder, error) {
@@ -103,12 +139,25 @@ func (s *MailService) Reply(req domain.ComposeRequest) error {
 	if !hasRePrefix(req.Subject) {
 		req.Subject = "Re: " + req.Subject
 	}
+<<<<<<< Updated upstream
 
 	log.Printf("[Reply] raw To: %v", req.To)
 	req.To = normalizeEmailList(req.To)
 	req.CC = normalizeEmailList(req.CC)
 	log.Printf("[Reply] normalized To: %v", req.To)
 
+=======
+	// Each reply is a NEW message joining the same flat thread (siblings).
+	// Generate a fresh Message-ID and extend the References chain.
+	if req.MessageID == "" {
+		req.MessageID = generateMessageID(s.domain)
+	}
+	if req.InReplyTo != "" && req.References == "" {
+		// Caller supplied only In-Reply-To (prev Message-ID): rebuild References
+		// as prev References + prev Message-ID.
+		req.References = buildReferences("", req.InReplyTo)
+	}
+>>>>>>> Stashed changes
 	if err := s.emailProvider.SendTransactionalEmail(context.Background(), domain.SendEmailRequest{
 		To:        req.To,
 		Subject:   req.Subject,
@@ -124,8 +173,5 @@ func (s *MailService) Reply(req domain.ComposeRequest) error {
 }
 
 func hasRePrefix(s string) bool {
-	if len(s) >= 3 && (s[:3] == "Re:" || s[:3] == "re:") {
-		return true
-	}
-	return false
+	return strings.HasPrefix(s, "Re:") || strings.HasPrefix(s, "re:")
 }

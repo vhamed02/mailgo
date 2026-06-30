@@ -153,12 +153,13 @@ func (h *MailHandler) DeleteMessage(c echo.Context) error {
 }
 
 type ComposeDTO struct {
-	To        []string `json:"to"         validate:"required"`
-	CC        []string `json:"cc"`
-	Subject   string   `json:"subject"    validate:"required"`
-	Body      string   `json:"body"       validate:"required"`
-	IsHTML    bool     `json:"is_html"`
-	InReplyTo string   `json:"in_reply_to"`
+	To         []string `json:"to"         validate:"required"`
+	CC         []string `json:"cc"`
+	Subject    string   `json:"subject"    validate:"required"`
+	Body       string   `json:"body"       validate:"required"`
+	IsHTML     bool     `json:"is_html"`
+	InReplyTo  string   `json:"in_reply_to"`
+	References string   `json:"references"`
 }
 
 func (h *MailHandler) Compose(c echo.Context) error {
@@ -210,6 +211,7 @@ func (h *MailHandler) Reply(c echo.Context) error {
 		Body:            req.Body,
 		IsHTML:          req.IsHTML,
 		InReplyTo:       req.InReplyTo,
+		References:      req.References,
 	}); err != nil {
 		return mailErr(c, err)
 	}

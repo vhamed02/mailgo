@@ -17,7 +17,17 @@ function senderName(from: string) {
   return m ? m[1].trim().replace(/^"(.*)"$/, '$1') : from.split('@')[0]
 }
 
-// Strip Re:/Fwd: prefixes (repeated, any locale-ish) to group a conversation.
+// Gmail-style conversation threading.
+//
+// A Conversation (Thread) is an ORDERED LIST of independent, first-class
+// messages — NEVER a parent/child tree. Threading is derived purely from RFC
+// metadata (Message-ID, In-Reply-To, References). There is no parentId, no
+// nested array, no recursive rendering.
+//
+// Two messages belong to the same thread if they share a common ancestor
+// (transitively via References/In-Reply-To) or — pragmatic fallback for
+// clients that don't set the headers — share a normalized subject.
+
 function normalizeSubject(s: string) {
   let r = (s || '').trim()
   const re = /^(re|fwd|fw|aw|wg|sv|tr|rv):\s*/i
@@ -25,10 +35,16 @@ function normalizeSubject(s: string) {
   return r.toLowerCase()
 }
 
+// Split a References header (whitespace-separated <id@host>) into a clean list.
+function refIds(refs: string | undefined): string[] {
+  if (!refs) return []
+  return refs.split(/\s+/).map(s => s.trim()).filter(Boolean)
+}
+
 type Conversation = {
-  key: string
+  key: string               // stable thread root id
   subject: string
-  messages: MailMessage[]      // newest-first (as returned by backend)
+  messages: MailMessage[]   // newest-first (as returned by backend)
   unread: number
   latest: MailMessage
 }
@@ -86,7 +102,14 @@ function ComposePanel({ from, replyTo, onSend, onDiscard }: {
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault(); setSending(true); setError('')
     try {
-      await onSend({ to: to.split(',').map(s => s.trim()).filter(Boolean), subject, body, is_html: false, in_reply_to: replyTo?.message_id })
+      await onSend({
+        to: to.split(',').map(s => s.trim()).filter(Boolean),
+        subject,
+        body,
+        is_html: false,
+        in_reply_to: replyTo?.message_id,
+        references: replyTo ? [replyTo.references, replyTo.message_id].filter(Boolean).join(' ') : undefined,
+      })
       setSent(true)
       setTimeout(onDiscard, 800)
     } catch { setError('Failed to send. Please try again.') }
@@ -156,12 +179,130 @@ function ComposePanel({ from, replyTo, onSend, onDiscard }: {
   )
 }
 
+<<<<<<< Updated upstream
 function MessageView({ msg, onReply, compact }: {
+=======
+// A segment of a reply chain extracted from a single email's body. Many email
+// clients (Gmail, Apple Mail, Outlook) embed the quoted previous message as a
+// <blockquote class="gmail_quote">. We split that block so each reply shows as
+// its own row, exactly like Gmail's "message → reply → reply" stacked view.
+type QuoteSegment = {
+  from?: string
+  date?: string
+  bodyHtml: string
+}
+
+function parseQuoteChain(html: string, baseFrom?: string, baseDate?: string): QuoteSegment[] {
+  if (!html) return baseFrom || baseDate ? [{ from: baseFrom, date: baseDate, bodyHtml: '' }] : []
+  const out: QuoteSegment[] = []
+  let currentHtml = html
+  let curFrom = baseFrom
+  let curDate = baseDate
+
+  let depth = 0
+  while (currentHtml && depth < 25) {
+    depth++
+    const doc = new DOMParser().parseFromString(currentHtml, 'text/html')
+    let quoteContainer: Element | null = doc.querySelector('div.gmail_quote_container')
+    let blockquote: Element | null = null
+    if (quoteContainer) blockquote = quoteContainer.querySelector('blockquote.gmail_quote')
+    if (!quoteContainer) {
+      blockquote = doc.querySelector('blockquote.gmail_quote')
+      if (blockquote) quoteContainer = blockquote
+    }
+
+    if (!quoteContainer) {
+      out.push({ from: curFrom, date: curDate, bodyHtml: currentHtml.trim() })
+      break
+    }
+
+    // Segment body = everything except the quote container.
+    const cloned = doc.cloneNode(true) as Document
+    const q = cloned.querySelector('div.gmail_quote_container') || cloned.querySelector('blockquote.gmail_quote')
+    if (q && q.parentNode) q.parentNode.removeChild(q)
+    let segBody = cloned.body ? cloned.body.innerHTML : ''
+    segBody = segBody.replace(/(<br\s*\/?>\s*)+$/i, '').replace(/(<div\s*>\s*<\/div>\s*)+$/i, '').trim()
+    out.push({ from: curFrom, date: curDate, bodyHtml: segBody })
+
+    // Parse "On <date>, <sender> wrote:" for the older (next) message.
+    const attr = quoteContainer.querySelector('.gmail_attr')
+    let nextFrom: string | undefined
+    let nextDate: string | undefined
+    if (attr) {
+      const txt = (attr.textContent || '').trim()
+      const m = txt.match(/^\s*On\s+(.+?)\s+wrote:\s*$/is)
+      if (m) {
+        const inner = m[1].trim()
+        const emailMatch = inner.match(/^(.*?)\s+(.+\s*<[^>]+>)\s*$/s)
+        if (emailMatch) {
+          nextDate = emailMatch[1].trim()
+          nextFrom = emailMatch[2].trim()
+        } else {
+          nextDate = inner
+        }
+      }
+    }
+
+    if (blockquote) {
+      currentHtml = blockquote.innerHTML
+      curFrom = nextFrom || curFrom
+      curDate = nextDate || curDate
+    } else {
+      if (nextFrom || nextDate) out.push({ from: nextFrom, date: nextDate, bodyHtml: '' })
+      break
+    }
+  }
+  return out
+}
+
+// Split a parsed "From" string into display name + email.
+// "MailGo <support@yerevan.digital>" -> { name: "MailGo", email: "support@yerevan.digital" }
+function splitFrom(s?: string): { name: string; email: string } {
+  if (!s) return { name: '', email: '' }
+  const m = s.match(/^\s*"?(.+?)"?\s*<([^>]+)>\s*$/)
+  if (m) return { name: m[1].trim(), email: m[2].trim() }
+  if (s.includes('@')) return { name: s.split('@')[0], email: s }
+  return { name: s, email: '' }
+}
+
+// Extract the bare email address from a "Name <email>" / "email" string.
+function stripEmail(s: string): string {
+  const m = s.match(/<([^>]+)>/)
+  if (m) return m[1]
+  return s.replace(/^\s+|\s+$/g, '')
+}
+
+// One message rendered as a Gmail-style thread: a flat list of independent
+// `role="listitem"` cards — oldest on top, newest at the bottom. No nesting,
+// no tree, no recursive rendering. The oldest quoted replies embedded in the
+// body (Gmail-style <blockquote class="gmail_quote">) are split out into their
+// own first-class cards above; the newest message keeps its full body
+// (including any embedded blockquote), exactly like Gmail.
+function MessageCard({ msg, isLast, onReply, onDelete }: {
+>>>>>>> Stashed changes
   msg: MailMessage
+  isLast: boolean
   onReply: () => void
+<<<<<<< Updated upstream
   compact?: boolean
+=======
+  onDelete: () => void
+>>>>>>> Stashed changes
 }) {
+  const segments = useMemo(
+    () => msg.body_html ? parseQuoteChain(msg.body_html, msg.from, msg.date) : [],
+    [msg.body_html, msg.from, msg.date],
+  )
+  // segments[0] = newest (quote-stripped body); segments[1..] = progressively older.
+  // For display order (oldest first), reverse the older slice, then append newest.
+  const older = segments.slice(1).reverse()   // oldest first
+  const newest = segments[0]
+  const recipientLabel = msg.to?.length ? `to ${msg.to.map(senderName).join(', ')}` : ''
+  const newestName = senderName(msg.from)
+  const newestEmail = stripEmail(msg.from)
+
   return (
+<<<<<<< Updated upstream
     <div className={compact ? 'border-t border-gray-100 pt-6 mt-6' : 'pt-2'}>
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-4">
@@ -191,9 +332,43 @@ function MessageView({ msg, onReply, compact }: {
             <div className="flex items-baseline gap-2">
               <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide w-10 flex-shrink-0">Date</span>
               <span className="text-gray-500 text-xs">{new Date(msg.date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
+=======
+    <div role="list" className="divide-y divide-gray-100">
+      {/* Older quoted messages — each a first-class card (oldest on top) */}
+      {older.map((seg, i) => {
+        const { name, email } = splitFrom(seg.from)
+        const dateLabel = seg.date || ''
+        return (
+          <div role="listitem" key={`old-${i}`} className="py-5">
+            <div className="message-header flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mb-2">
+              <span className="font-semibold text-gray-900">{name || 'Previous message'}</span>
+              {email && <span className="text-xs text-gray-400">&lt;{email}&gt;</span>}
+              {dateLabel && <span className="text-xs text-gray-400 ml-auto">{dateLabel}</span>}
+            </div>
+            <div className="message-body">
+              {seg.bodyHtml ? (
+                <iframe srcDoc={seg.bodyHtml} sandbox="allow-same-origin" className="w-full border-0" style={{ minHeight: '30vh' }} title={`old-${i}`} />
+              ) : (
+                <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans leading-relaxed">(no content)</pre>
+              )}
+>>>>>>> Stashed changes
             </div>
           </div>
+        )
+      })}
+
+      {/* Newest message — body with embedded quote block stripped (already
+          rendered as its own card above, exactly like Gmail). */}
+      <div role="listitem" className={`py-5 ${isLast ? '' : ''}`}>
+        <div className="message-header flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mb-1">
+          <span className="font-semibold text-gray-900">{newestName}</span>
+          <span className="text-xs text-gray-400">&lt;{newestEmail}&gt;</span>
+          <span className="text-xs text-gray-400 ml-auto">
+            {new Date(msg.date).toLocaleString()}
+            {recipientLabel && <span className="ml-2">· {recipientLabel}</span>}
+          </span>
         </div>
+<<<<<<< Updated upstream
         {/* Primary Reply CTA */}
         <button
           onClick={onReply}
@@ -219,6 +394,30 @@ function MessageView({ msg, onReply, compact }: {
         ) : (
           <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans leading-relaxed">{msg.body_text}</pre>
         )}
+=======
+        <div className="flex gap-2 mb-3">
+          <button onClick={onReply}
+            className="h-8 px-3 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 flex items-center gap-1.5 transition-colors">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+            </svg>
+            Reply
+          </button>
+          <button onClick={onDelete}
+            className="h-8 px-3 rounded-lg border border-red-200 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors">
+            Delete
+          </button>
+        </div>
+        <div className="message-body">
+          {newest?.bodyHtml ? (
+            <iframe srcDoc={newest.bodyHtml} sandbox="allow-same-origin" className="w-full border-0" style={{ minHeight: '50vh' }} title={`msg-${msg.uid}`} />
+          ) : msg.body_html ? (
+            <iframe srcDoc={msg.body_html} sandbox="allow-same-origin" className="w-full border-0" style={{ minHeight: '50vh' }} title={`msg-${msg.uid}`} />
+          ) : (
+            <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans leading-relaxed">{msg.body_text}</pre>
+          )}
+        </div>
+>>>>>>> Stashed changes
       </div>
     </div>
   )
@@ -260,19 +459,50 @@ function WebmailApp({ mailboxes, initialMailbox, password }: {
     } catch {} finally { if (!silent) setLoadingMsgs(false) }
   }, [client, activeFolder, page])
 
-  // Group messages into conversations by normalized subject.
+  // Group messages into conversations by RFC threading (References/In-Reply-To),
+  // with a normalized-subject fallback. The result is a flat ordered list of
+  // independent messages per conversation — no parent/child tree.
   const conversations: Conversation[] = useMemo(() => {
-    const map: Record<string, Conversation> = {}
+    const byId: Record<string, MailMessage> = {}
+    for (const m of messages) if (m.message_id) byId[m.message_id] = m
+
+    // Union-Find over Message-IDs linking messages in the same thread.
+    const parent: Record<string, string> = {}
+    const find = (x: string): string => {
+      if (parent[x] === undefined) parent[x] = x
+      while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x] }
+      return x
+    }
+    const union = (a: string, b: string) => {
+      const ra = find(a), rb = find(b)
+      if (ra !== rb) parent[ra] = rb
+    }
+
+    for (const m of messages) {
+      const a = m.message_id || `uid:${m.uid}`
+      const ids = [...refIds(m.references)]
+      if (m.in_reply_to) ids.push(m.in_reply_to)
+      for (const r of ids) {
+        // Only union with ancestors that actually exist in this mailbox window,
+        // OR chain to the reference id itself (the root may be off-window).
+        union(a, r)
+      }
+    }
+
+    const buckets: Record<string, Conversation> = {}
     const ordered: Conversation[] = []
     for (const m of messages) {
-      const key = normalizeSubject(m.subject) || '(no subject)'
-      if (!map[key]) {
-        const c: Conversation = { key, subject: m.subject || '(no subject)', messages: [], unread: 0, latest: m }
-        map[key] = c; ordered.push(c)
+      // Prefer RFC threading root; as a stable fallback for messages with no
+      // References at all, fall back to normalized subject so user-visible
+      // replies on the same topic still group.
+      const root = (m.references || m.in_reply_to) ? find(m.message_id || `uid:${m.uid}`) : `subj:${normalizeSubject(m.subject)}`
+      if (!buckets[root]) {
+        const c: Conversation = { key: root, subject: m.subject || '(no subject)', messages: [], unread: 0, latest: m }
+        buckets[root] = c; ordered.push(c)
       }
-      map[key].messages.push(m)
-      if (!m.is_read) map[key].unread++
-      if (new Date(m.date) > new Date(map[key].latest.date)) map[key].latest = m
+      buckets[root].messages.push(m)
+      if (!m.is_read) buckets[root].unread++
+      if (new Date(m.date) > new Date(buckets[root].latest.date)) buckets[root].latest = m
     }
     return ordered
   }, [messages])
@@ -471,17 +701,27 @@ function WebmailApp({ mailboxes, initialMailbox, password }: {
         )}
 
         {view === 'thread' && (
+<<<<<<< Updated upstream
           <div className="max-w-3xl mx-auto w-full px-8 py-6 flex flex-col" style={{ minHeight: '100%' }}>
             <div className="pb-5 border-b border-gray-100">
               <h1 className="text-2xl font-bold text-gray-900 leading-tight">{thread[0]?.subject || '(no subject)'}</h1>
               <p className="text-xs text-gray-400 mt-1">{thread.length} message{thread.length > 1 ? 's' : ''}</p>
+=======
+          <>
+          {thread[0]?.subject && (
+            <div className="w-full px-8 pt-6 pb-3">
+              <h2 className="text-xl font-bold text-gray-900">{thread[0].subject}</h2>
+>>>>>>> Stashed changes
             </div>
-            <div ref={scrollRef} className="flex-1 overflow-y-auto">
+          )}
+          <div className="w-full px-8 py-6 flex flex-col" style={{ minHeight: '100%' }}>
+            <div ref={scrollRef} className="flex-1 overflow-y-auto divide-y divide-gray-100">
+              {/* Flat list of independent message cards — oldest first (Gmail). */}
               {thread.map((msg, i) => (
-                <MessageView
+                <MessageCard
                   key={msg.uid}
                   msg={msg}
-                  compact={i > 0}
+                  isLast={i === thread.length - 1}
                   onReply={() => { setReplyMsg(msg); setView('reply') }}
                 />
               ))}

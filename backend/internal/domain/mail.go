@@ -9,9 +9,15 @@ type MailFolder struct {
 	TotalCount  int    `json:"total_count"`
 }
 
+// MailMessage is a single, first-class email. It is NEVER a child of another
+// message. Threading is derived purely from RFC metadata (MessageID, InReplyTo,
+// References) — exactly like Gmail/Apple Mail/Outlook. There is no parentId,
+// no nested array, no reply tree.
 type MailMessage struct {
 	UID           uint32    `json:"uid"`
 	MessageID     string    `json:"message_id"`
+	InReplyTo     string    `json:"in_reply_to,omitempty"`
+	References    string    `json:"references,omitempty"`
 	From          string    `json:"from"`
 	To            []string  `json:"to"`
 	CC            []string  `json:"cc"`
@@ -34,7 +40,11 @@ type ComposeRequest struct {
 	Subject         string
 	Body            string
 	IsHTML          bool
-	InReplyTo       string
+	// RFC threading metadata. On reply these are set so the new message links
+	// into the same flat thread (siblings, never children).
+	MessageID  string
+	InReplyTo  string
+	References string
 }
 
 type IMAPAdapter interface {

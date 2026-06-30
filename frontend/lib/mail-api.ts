@@ -64,6 +64,8 @@ export type MailFolder = {
 export type MailMessage = {
   uid: number
   message_id: string
+  in_reply_to?: string
+  references?: string
   from: string
   to: string[]
   cc: string[]
@@ -71,7 +73,7 @@ export type MailMessage = {
   date: string
   is_read: boolean
   has_attachment: boolean
-  folder: string
+  folder?: string
   body_html?: string
   body_text?: string
   snippet?: string
@@ -84,4 +86,5 @@ export type ComposePayload = {
   body: string
   is_html?: boolean
   in_reply_to?: string
+  references?: string
 }

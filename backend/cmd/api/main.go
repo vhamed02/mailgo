@@ -86,7 +86,7 @@ func main() {
 	}
 	imapAdapter := imapinfra.NewAdapter(getEnv("IMAP_HOST", "mailcow"), imapPort, imapTLS)
 
-	mailService := application.NewMailService(imapAdapter, emailSenderAdapter, getEnv("BREVO_FROM_NAME", "MailGo"))
+	mailService := application.NewMailService(imapAdapter, emailSenderAdapter, getEnv("BREVO_FROM_NAME", "MailGo"), getEnv("MAILGO_SEND_DOMAIN", "mailgo.local"))
 
 	// Initialize repositories
 	userRepo := postgres.NewUserRepository(db)
