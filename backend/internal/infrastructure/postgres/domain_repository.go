@@ -20,7 +20,7 @@ func NewDomainRepository(db *pgxpool.Pool) *DomainRepository {
 
 const domainSelectCols = `
 	id, organization_id, name, status, dns_verified,
-	spf_record, dkim_record, dmarc_record,
+	COALESCE(mx_record,''), spf_record, dkim_record, dmarc_record,
 	COALESCE(brevo_code_value,''), COALESCE(brevo_dkim1_host,''), COALESCE(brevo_dkim1_value,''),
 	COALESCE(brevo_dkim2_host,''), COALESCE(brevo_dkim2_value,''), COALESCE(brevo_dmarc_value,''),
 	brevo_verified, brevo_authenticated,
@@ -30,7 +30,7 @@ func scanDomain(row interface{ Scan(...any) error }) (*domain.Domain, error) {
 	d := &domain.Domain{}
 	err := row.Scan(
 		&d.ID, &d.OrganizationID, &d.Name, &d.Status, &d.DNSVerified,
-		&d.SPFRecord, &d.DKIMRecord, &d.DMARCRecord,
+		&d.MXRecord, &d.SPFRecord, &d.DKIMRecord, &d.DMARCRecord,
 		&d.BrevoCodeValue, &d.BrevoDkim1Host, &d.BrevoDkim1Value,
 		&d.BrevoDkim2Host, &d.BrevoDkim2Value, &d.BrevoDmarcValue,
 		&d.BrevoVerified, &d.BrevoAuthenticated,
@@ -107,16 +107,16 @@ func (r *DomainRepository) Update(ctx context.Context, d *domain.Domain) error {
 	query := `
 		UPDATE domains SET
 			status = $1, dns_verified = $2,
-			spf_record = $3, dkim_record = $4, dmarc_record = $5,
-			brevo_code_value = $6, brevo_dkim1_host = $7, brevo_dkim1_value = $8,
-			brevo_dkim2_host = $9, brevo_dkim2_value = $10, brevo_dmarc_value = $11,
-			brevo_verified = $12, brevo_authenticated = $13,
-			verified_at = $14, updated_at = $15
-		WHERE id = $16
+			mx_record = $3, spf_record = $4, dkim_record = $5, dmarc_record = $6,
+			brevo_code_value = $7, brevo_dkim1_host = $8, brevo_dkim1_value = $9,
+			brevo_dkim2_host = $10, brevo_dkim2_value = $11, brevo_dmarc_value = $12,
+			brevo_verified = $13, brevo_authenticated = $14,
+			verified_at = $15, updated_at = $16
+		WHERE id = $17
 	`
 	_, err := r.db.Exec(ctx, query,
 		d.Status, d.DNSVerified,
-		d.SPFRecord, d.DKIMRecord, d.DMARCRecord,
+		d.MXRecord, d.SPFRecord, d.DKIMRecord, d.DMARCRecord,
 		d.BrevoCodeValue, d.BrevoDkim1Host, d.BrevoDkim1Value,
 		d.BrevoDkim2Host, d.BrevoDkim2Value, d.BrevoDmarcValue,
 		d.BrevoVerified, d.BrevoAuthenticated,

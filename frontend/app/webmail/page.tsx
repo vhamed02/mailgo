@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, Suspense } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createMailClient, type MailFolder, type MailMessage, type ComposePayload } from '@/lib/mail-api'
 
@@ -15,6 +15,22 @@ function formatDate(d: string) {
 function senderName(from: string) {
   const m = from.match(/^(.+?)\s*</)
   return m ? m[1].trim().replace(/^"(.*)"$/, '$1') : from.split('@')[0]
+}
+
+// Strip Re:/Fwd: prefixes (repeated, any locale-ish) to group a conversation.
+function normalizeSubject(s: string) {
+  let r = (s || '').trim()
+  const re = /^(re|fwd|fw|aw|wg|sv|tr|rv):\s*/i
+  while (re.test(r)) r = r.replace(re, '').trim()
+  return r.toLowerCase()
+}
+
+type Conversation = {
+  key: string
+  subject: string
+  messages: MailMessage[]      // newest-first (as returned by backend)
+  unread: number
+  latest: MailMessage
 }
 
 function UnlockScreen({ mailbox, onUnlock }: { mailbox: string; onUnlock: (p: string) => void }) {
@@ -53,8 +69,6 @@ function UnlockScreen({ mailbox, onUnlock }: { mailbox: string; onUnlock: (p: st
     </div>
   )
 }
-
-type View = 'empty' | 'loading' | 'message' | 'compose' | 'reply'
 
 function ComposePanel({ from, replyTo, onSend, onDiscard }: {
   from: string
@@ -142,6 +156,49 @@ function ComposePanel({ from, replyTo, onSend, onDiscard }: {
   )
 }
 
+function MessageView({ msg, onReply, onDelete, compact }: {
+  msg: MailMessage
+  onReply: () => void
+  onDelete: () => void
+  compact?: boolean
+}) {
+  return (
+    <div className={compact ? 'border-b border-gray-100 last:border-0 py-5' : 'py-6'}>
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex-1 min-w-0">
+          {!compact && <h2 className="text-xl font-bold text-gray-900 mb-3">{msg.subject || '(no subject)'}</h2>}
+          <div className="text-sm text-gray-600 space-y-1">
+            <div><span className="text-gray-400 w-12 inline-block">From</span>{msg.from}</div>
+            <div><span className="text-gray-400 w-12 inline-block">To</span>{msg.to?.join(', ')}</div>
+            {msg.cc?.length > 0 && <div><span className="text-gray-400 w-12 inline-block">CC</span>{msg.cc.join(', ')}</div>}
+            <div><span className="text-gray-400 w-12 inline-block">Date</span>{new Date(msg.date).toLocaleString()}</div>
+          </div>
+        </div>
+        <div className="flex gap-2 ml-4 flex-shrink-0">
+          <button onClick={onReply}
+            className="h-8 px-3 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 flex items-center gap-1.5 transition-colors">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+            </svg>
+            Reply
+          </button>
+          <button onClick={onDelete}
+            className="h-8 px-3 rounded-lg border border-red-200 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors">
+            Delete
+          </button>
+        </div>
+      </div>
+      <div className="border-t border-gray-100 pt-4">
+        {msg.body_html ? (
+          <iframe srcDoc={msg.body_html} sandbox="allow-same-origin" className="w-full border-0" style={{ minHeight: compact ? '40vh' : '60vh' }} title="email" />
+        ) : (
+          <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans leading-relaxed">{msg.body_text}</pre>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function WebmailApp({ mailboxes, initialMailbox, password }: {
   mailboxes: string[]; initialMailbox: string; password: string
 }) {
@@ -152,45 +209,123 @@ function WebmailApp({ mailboxes, initialMailbox, password }: {
   const [messages, setMessages] = useState<MailMessage[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
-  const [selected, setSelected] = useState<MailMessage | null>(null)
-  const [full, setFull] = useState<MailMessage | null>(null)
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const [thread, setThread] = useState<MailMessage[]>([])   // full messages, oldest→newest
   const [loadingMsgs, setLoadingMsgs] = useState(false)
-  const [view, setView] = useState<View>('empty')
+  const [view, setView] = useState<'empty' | 'loading' | 'thread' | 'compose' | 'reply'>('empty')
   const [replyMsg, setReplyMsg] = useState<MailMessage | undefined>()
+
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const pollingRef = useRef(false)
 
   const switchMailbox = (addr: string) => {
     setMailbox(addr); setClient(createMailClient(addr, password))
-    setActiveFolder('INBOX'); setSelected(null); setFull(null); setPage(1); setView('empty')
+    setActiveFolder('INBOX'); setSelectedKey(null); setThread([]); setPage(1); setView('empty')
   }
 
   const loadFolders = useCallback(async () => {
     try { setFolders(await client.listFolders()) } catch {}
   }, [client])
 
-  const loadMessages = useCallback(async () => {
-    setLoadingMsgs(true)
-    try { const r = await client.listMessages(activeFolder, page); setMessages(r.data); setTotal(r.total) }
-    catch {} finally { setLoadingMsgs(false) }
+  const loadMessages = useCallback(async (silent = false) => {
+    if (!silent) setLoadingMsgs(true)
+    try {
+      const r = await client.listMessages(activeFolder, page)
+      setMessages(r.data); setTotal(r.total)
+    } catch {} finally { if (!silent) setLoadingMsgs(false) }
   }, [client, activeFolder, page])
 
-  useEffect(() => { loadFolders() }, [loadFolders])
-  useEffect(() => { loadMessages(); setSelected(null); setFull(null); setView('empty') }, [loadMessages])
+  // Group messages into conversations by normalized subject.
+  const conversations: Conversation[] = useMemo(() => {
+    const map: Record<string, Conversation> = {}
+    const ordered: Conversation[] = []
+    for (const m of messages) {
+      const key = normalizeSubject(m.subject) || '(no subject)'
+      if (!map[key]) {
+        const c: Conversation = { key, subject: m.subject || '(no subject)', messages: [], unread: 0, latest: m }
+        map[key] = c; ordered.push(c)
+      }
+      map[key].messages.push(m)
+      if (!m.is_read) map[key].unread++
+      if (new Date(m.date) > new Date(map[key].latest.date)) map[key].latest = m
+    }
+    return ordered
+  }, [messages])
 
-  const openMessage = async (msg: MailMessage) => {
-    setSelected(msg); setView('loading')
-    try { const m = await client.getMessage(msg.uid, activeFolder); setFull(m); setView('message') }
-    catch { setView('empty') }
+  // Initial load (folder / page change) — reset selection.
+  useEffect(() => { loadFolders() }, [loadFolders])
+  useEffect(() => { loadMessages(); setSelectedKey(null); setThread([]); setView('empty') }, [loadMessages])
+
+  // Auto-refresh inbox every 5 seconds (silent — does not disturb reading).
+  useEffect(() => {
+    const id = setInterval(async () => {
+      if (pollingRef.current) return
+      pollingRef.current = true
+      try {
+        // Refresh folder list (for unread badges) + message list silently.
+        try { setFolders(await client.listFolders()) } catch {}
+        await loadMessages(true)
+        // If a conversation is open, refresh its full messages too so new
+        // replies appear below automatically (like Gmail).
+        if (selectedKey) {
+          const c = conversations.find(c => c.key === selectedKey)
+          if (c) await refreshThread(c, true)
+        }
+      } finally { pollingRef.current = false }
+    }, 5000)
+    return () => clearInterval(id)
+  }, [client, loadMessages, selectedKey, conversations])
+
+  // Refresh the full bodies of a conversation's messages (oldest→newest).
+  const refreshThread = async (c: Conversation, silent = false) => {
+    if (!silent) setView('loading')
+    try {
+      // c.messages is newest-first; reverse to oldest-first like Gmail thread.
+      const ordered = [...c.messages].reverse()
+      const fulls = await Promise.all(ordered.map(m => client.getMessage(m.uid, activeFolder)))
+      fulls.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      setThread(fulls)
+      if (!silent) setView('thread')
+      // Scroll the newest message into view (bottom) once rendered.
+      setTimeout(() => {
+        const el = scrollRef.current
+        if (el) el.scrollTop = el.scrollHeight
+      }, 50)
+    } catch { if (!silent) setView('empty') }
+  }
+
+  const openConversation = async (c: Conversation) => {
+    setSelectedKey(c.key)
+    await refreshThread(c)
+    // Mark every unread message in the conversation as read.
+    const unreads = c.messages.filter(m => !m.is_read)
+    for (const m of unreads) {
+      try { await client.markRead(m.uid, activeFolder, true) } catch {}
+    }
+    // Reflect read state optimistically in the list + folder unread counts.
+    if (unreads.length > 0) {
+      setMessages(prev => prev.map(m =>
+        normalizeSubject(m.subject) === c.key ? { ...m, is_read: true } : m))
+      setFolders(prev => prev.map(f => f.name === activeFolder
+        ? { ...f, unread_count: Math.max(0, f.unread_count - unreads.length) } : f))
+    }
   }
 
   const deleteMessage = async (msg: MailMessage) => {
-    try { await client.deleteMessage(msg.uid, activeFolder); setSelected(null); setFull(null); setView('empty'); loadMessages() }
-    catch {}
+    try {
+      await client.deleteMessage(msg.uid, activeFolder)
+      setThread(prev => prev.filter(m => m.uid !== msg.uid))
+      if (thread.filter(m => m.uid !== msg.uid).length === 0) {
+        setSelectedKey(null); setView('empty')
+      }
+      loadMessages(true)
+    } catch {}
   }
 
   const sendMessage = async (payload: ComposePayload) => {
     if (view === 'reply' && replyMsg) await client.reply(payload)
     else await client.compose(payload)
-    loadMessages()
+    loadMessages(true)
   }
 
   const folderOrder = ['INBOX', 'Sent', 'Drafts', 'Spam', 'Trash']
@@ -242,16 +377,20 @@ function WebmailApp({ mailboxes, initialMailbox, password }: {
             <div className="flex items-center justify-center h-32">
               <div className="animate-spin w-5 h-5 rounded-full border-2 border-blue-600 border-t-transparent" />
             </div>
-          ) : messages.length === 0 ? (
+          ) : conversations.length === 0 ? (
             <div className="text-center text-gray-400 py-12 text-sm">No messages</div>
-          ) : messages.map(msg => (
-            <button key={msg.uid} onClick={() => openMessage(msg)}
-              className={`w-full text-left px-4 py-3 transition-colors ${selected?.uid === msg.uid && view === 'message' ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
+          ) : conversations.map(c => (
+            <button key={c.key} onClick={() => openConversation(c)}
+              className={`w-full text-left px-4 py-3 transition-colors ${selectedKey === c.key ? 'bg-blue-50' : 'hover:bg-gray-50'}`}>
               <div className="flex items-center justify-between mb-0.5">
-                <span className={`truncate max-w-[140px] ${!msg.is_read ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>{senderName(msg.from)}</span>
-                <span className="text-xs text-gray-400 flex-shrink-0 ml-1">{formatDate(msg.date)}</span>
+                <span className={`truncate max-w-[140px] ${c.unread > 0 ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>{senderName(c.latest.from)}</span>
+                <span className="text-xs text-gray-400 flex-shrink-0 ml-1">{formatDate(c.latest.date)}</span>
               </div>
-              <p className={`truncate text-xs ${!msg.is_read ? 'text-gray-700 font-medium' : 'text-gray-500'}`}>{msg.subject || '(no subject)'}</p>
+              <div className="flex items-center gap-1.5">
+                <p className={`truncate text-xs flex-1 ${c.unread > 0 ? 'text-gray-700 font-medium' : 'text-gray-500'}`}>{c.subject || '(no subject)'}</p>
+                {c.messages.length > 1 && <span className="text-[10px] px-1 py-0.5 rounded bg-gray-200 text-gray-500 font-medium flex-shrink-0">{c.messages.length}</span>}
+                {c.unread > 0 && <span className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0" />}
+              </div>
             </button>
           ))}
         </div>
@@ -271,7 +410,7 @@ function WebmailApp({ mailboxes, initialMailbox, password }: {
             <svg className="w-12 h-12 mb-3 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
-            <p className="text-sm">Select a message to read</p>
+            <p className="text-sm">Select a conversation to read</p>
           </div>
         )}
 
@@ -281,38 +420,22 @@ function WebmailApp({ mailboxes, initialMailbox, password }: {
           </div>
         )}
 
-        {view === 'message' && full && (
-          <div className="max-w-3xl mx-auto w-full p-8">
-            <div className="flex items-start justify-between mb-6">
-              <div className="flex-1 min-w-0">
-                <h2 className="text-xl font-bold text-gray-900 mb-3">{full.subject || '(no subject)'}</h2>
-                <div className="text-sm text-gray-600 space-y-1 pl-4">
-                  <div><span className="text-gray-400 w-12 inline-block">From</span>{full.from}</div>
-                  <div><span className="text-gray-400 w-12 inline-block">To</span>{full.to?.join(', ')}</div>
-                  {full.cc?.length > 0 && <div><span className="text-gray-400 w-12 inline-block">CC</span>{full.cc.join(', ')}</div>}
-                  <div><span className="text-gray-400 w-12 inline-block">Date</span>{new Date(full.date).toLocaleString()}</div>
-                </div>
-              </div>
-              <div className="flex gap-2 ml-4 flex-shrink-0">
-                <button onClick={() => { setReplyMsg(full); setView('reply') }}
-                  className="h-8 px-3 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 flex items-center gap-1.5 transition-colors">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                  </svg>
-                  Reply
-                </button>
-                <button onClick={() => deleteMessage(full)}
-                  className="h-8 px-3 rounded-lg border border-red-200 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors">
-                  Delete
-                </button>
-              </div>
+        {view === 'thread' && (
+          <div className="max-w-3xl mx-auto w-full px-8 py-6 flex flex-col" style={{ minHeight: '100%' }}>
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900">{thread[0]?.subject || '(no subject)'}</h2>
+              <span className="text-xs text-gray-400">{thread.length} message{thread.length > 1 ? 's' : ''}</span>
             </div>
-            <div className="border-t border-gray-100 pt-6">
-              {full.body_html ? (
-                <iframe srcDoc={full.body_html} sandbox="allow-same-origin" className="w-full border-0" style={{ minHeight: '60vh' }} title="email" />
-              ) : (
-                <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans leading-relaxed">{full.body_text}</pre>
-              )}
+            <div ref={scrollRef} className="flex-1 overflow-y-auto">
+              {thread.map((msg, i) => (
+                <MessageView
+                  key={msg.uid}
+                  msg={msg}
+                  compact={i > 0}
+                  onReply={() => { setReplyMsg(msg); setView('reply') }}
+                  onDelete={() => deleteMessage(msg)}
+                />
+              ))}
             </div>
           </div>
         )}
@@ -322,7 +445,7 @@ function WebmailApp({ mailboxes, initialMailbox, password }: {
             from={mailbox}
             replyTo={view === 'reply' ? replyMsg : undefined}
             onSend={sendMessage}
-            onDiscard={() => { setView(full ? 'message' : 'empty'); setReplyMsg(undefined) }}
+            onDiscard={() => { setView(thread.length > 0 ? 'thread' : 'empty'); setReplyMsg(undefined) }}
           />
         )}
       </main>

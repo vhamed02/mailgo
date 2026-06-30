@@ -12,6 +12,7 @@ type Domain = {
   name: string
   status: string
   dns_verified: boolean
+  mx_record: string
   spf_record: string
   dkim_record: string
   dmarc_record: string
@@ -246,9 +247,12 @@ export default function DomainsPage() {
               type Rec = { label: string; type: string; name: string; value: string; key: string }
               const records: Rec[] = []
 
-              if (selected.spf_record) records.push({
-                label: 'SPF', type: 'TXT', name: '@', value: selected.spf_record, key: 'spf'
-              })
+              if (selected.mx_record) records.push({
+              label: 'MX (receiving email)', type: 'MX', name: '@', value: selected.mx_record, key: 'mx'
+            })
+            if (selected.spf_record) records.push({
+              label: 'SPF', type: 'TXT', name: '@', value: selected.spf_record, key: 'spf'
+            })
               if (selected.dkim_record) records.push({
                 label: 'DKIM (mail server)', type: 'TXT', name: 'mail._domainkey', value: selected.dkim_record, key: 'dkim'
               })

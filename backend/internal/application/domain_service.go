@@ -16,10 +16,11 @@ import (
 )
 
 type DomainService struct {
-	domainRepo domain.DomainRepository
-	quotaRepo  domain.QuotaRepository
-	auditRepo  domain.AuditLogRepository
-	queue      domain.QueueAdapter
+	domainRepo        domain.DomainRepository
+	quotaRepo         domain.QuotaRepository
+	auditRepo         domain.AuditLogRepository
+	queue             domain.QueueAdapter
+	mailServerAddress string
 }
 
 func NewDomainService(
@@ -27,12 +28,14 @@ func NewDomainService(
 	quotaRepo domain.QuotaRepository,
 	auditRepo domain.AuditLogRepository,
 	queue domain.QueueAdapter,
+	mailServerAddress string,
 ) *DomainService {
 	return &DomainService{
-		domainRepo: domainRepo,
-		quotaRepo:  quotaRepo,
-		auditRepo:  auditRepo,
-		queue:      queue,
+		domainRepo:        domainRepo,
+		quotaRepo:         quotaRepo,
+		auditRepo:         auditRepo,
+		queue:             queue,
+		mailServerAddress: mailServerAddress,
 	}
 }
 
@@ -79,7 +82,7 @@ func (s *DomainService) AddDomain(ctx context.Context, req AddDomainRequest) (*d
 		return nil, domain.ErrDomainLimitReached
 	}
 
-	spf, dkim := s.generateMailcowRecords(domainName)
+	spf, dkim, mx := s.generateMailcowRecords(domainName)
 
 	dom := &domain.Domain{
 		ID:             uuid.New(),
@@ -87,6 +90,7 @@ func (s *DomainService) AddDomain(ctx context.Context, req AddDomainRequest) (*d
 		Name:           domainName,
 		Status:         domain.DomainStatusPending,
 		DNSVerified:    false,
+		MXRecord:       mx,
 		SPFRecord:      spf,
 		DKIMRecord:     dkim,
 		CreatedAt:      time.Now(),
@@ -172,9 +176,10 @@ func (s *DomainService) RegenerateDNSRecords(ctx context.Context, id uuid.UUID, 
 	if dom.OrganizationID != orgID {
 		return nil, domain.ErrForbidden
 	}
-	spf, dkim := s.generateMailcowRecords(dom.Name)
+	spf, dkim, mx := s.generateMailcowRecords(dom.Name)
 	dom.SPFRecord = spf
 	dom.DKIMRecord = dkim
+	dom.MXRecord = mx
 	dom.DNSVerified = false
 	dom.BrevoVerified = false
 	dom.BrevoAuthenticated = false
@@ -187,8 +192,14 @@ func (s *DomainService) RegenerateDNSRecords(ctx context.Context, id uuid.UUID, 
 	return dom, nil
 }
 
-func (s *DomainService) generateMailcowRecords(domainName string) (spf, dkim string) {
+func (s *DomainService) generateMailcowRecords(domainName string) (spf, dkim, mx string) {
 	spf = "v=spf1 mx include:mailgo.io ~all"
+
+	// MX — points the domain at the mail server so it can receive mail.
+	// Format: "<priority> <mail server hostname>." (used verbatim in DNS modal).
+	if s.mailServerAddress != "" {
+		mx = fmt.Sprintf("10 %s.", strings.TrimSuffix(s.mailServerAddress, "."))
+	}
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err == nil {

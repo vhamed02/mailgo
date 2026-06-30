@@ -71,6 +71,7 @@ type Domain struct {
 	Name                string       `json:"name"`
 	Status              DomainStatus `json:"status"`
 	DNSVerified         bool         `json:"dns_verified"`
+	MXRecord            string       `json:"mx_record"`
 	SPFRecord           string       `json:"spf_record"`
 	DKIMRecord          string       `json:"dkim_record"`
 	DMARCRecord         string       `json:"dmarc_record"`

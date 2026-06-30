@@ -25,12 +25,13 @@ const (
 )
 
 type Handlers struct {
-	mailboxRepo   domain.MailboxRepository
-	domainRepo    domain.DomainRepository
-	mailServer    domain.MailServerAdapter
-	emailSender   domain.EmailSenderAdapter
-	emailProvider domain.EmailProviderAdapter
-	cache         domain.CacheAdapter
+	mailboxRepo        domain.MailboxRepository
+	domainRepo         domain.DomainRepository
+	mailServer         domain.MailServerAdapter
+	emailSender        domain.EmailSenderAdapter
+	emailProvider      domain.EmailProviderAdapter
+	cache              domain.CacheAdapter
+	mailServerAddress  string
 }
 
 func NewHandlers(
@@ -40,14 +41,16 @@ func NewHandlers(
 	emailSender domain.EmailSenderAdapter,
 	emailProvider domain.EmailProviderAdapter,
 	cache domain.CacheAdapter,
+	mailServerAddress string,
 ) *Handlers {
 	return &Handlers{
-		mailboxRepo:   mailboxRepo,
-		domainRepo:    domainRepo,
-		mailServer:    mailServer,
-		emailSender:   emailSender,
-		emailProvider: emailProvider,
-		cache:         cache,
+		mailboxRepo:       mailboxRepo,
+		domainRepo:        domainRepo,
+		mailServer:        mailServer,
+		emailSender:       emailSender,
+		emailProvider:     emailProvider,
+		cache:             cache,
+		mailServerAddress: mailServerAddress,
 	}
 }
 
@@ -185,6 +188,7 @@ func (h *Handlers) HandleDomainVerification(ctx context.Context, task *asynq.Tas
 	}
 
 	spfOK := checkSPF(dom.Name)
+	mxOK := checkMX(dom.Name, h.mailServerAddress)
 
 	providerOK := false
 	if err := h.emailProvider.AuthenticateDomain(ctx, dom.Name); err != nil {
@@ -193,7 +197,7 @@ func (h *Handlers) HandleDomainVerification(ctx context.Context, task *asynq.Tas
 		providerOK = true
 	}
 
-	if spfOK && providerOK {
+	if spfOK && providerOK && mxOK {
 		// Register the domain on the mail server (Mailcow) so it can
 		// accept mailboxes for it. This must happen before any mailbox
 		// provisioning, which Mailcow rejects for unknown domains.
@@ -227,6 +231,7 @@ func (h *Handlers) HandleDomainVerification(ctx context.Context, task *asynq.Tas
 	} else {
 		log.Warn().
 			Str("domain", dom.Name).
+			Bool("mx_ok", mxOK).
 			Bool("spf_ok", spfOK).
 			Bool("provider_ok", providerOK).
 			Msg("Domain verification incomplete — DNS records not yet propagated")
@@ -242,6 +247,25 @@ func checkSPF(domainName string) bool {
 	}
 	for _, txt := range txts {
 		if strings.HasPrefix(txt, "v=spf1") {
+			return true
+		}
+	}
+	return false
+}
+
+// checkMX verifies the domain has an MX record pointing to the mail server.
+// If mailServerAddress is empty, only require any MX record to exist.
+func checkMX(domainName, mailServerAddress string) bool {
+	mxs, err := net.LookupMX(domainName)
+	if err != nil || len(mxs) == 0 {
+		return false
+	}
+	if mailServerAddress == "" {
+		return true
+	}
+	target := strings.TrimSuffix(mailServerAddress, ".") + "."
+	for _, mx := range mxs {
+		if strings.EqualFold(mx.Host, target) {
 			return true
 		}
 	}

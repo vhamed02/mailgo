@@ -1,0 +1,2 @@
+ALTER TABLE domains
+    ADD COLUMN IF NOT EXISTS mx_record TEXT;

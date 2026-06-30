@@ -83,6 +83,7 @@ func main() {
 		emailSenderAdapter,
 		emailSenderAdapter,
 		cacheAdapter,
+		getEnv("MAIL_SERVER_HOSTNAME", ""),
 	)
 
 	// Create Asynq server
