@@ -242,6 +242,7 @@ func (a *Adapter) AppendSent(addr, password string, req domain.ComposeRequest) e
 	buf.WriteString("MIME-Version: 1.0\r\n")
 	if req.InReplyTo != "" {
 		buf.WriteString(fmt.Sprintf("In-Reply-To: %s\r\n", req.InReplyTo))
+		buf.WriteString(fmt.Sprintf("References: %s\r\n", req.InReplyTo))
 	}
 	if req.IsHTML {
 		buf.WriteString("Content-Type: text/html; charset=UTF-8\r\n")

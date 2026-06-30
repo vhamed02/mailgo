@@ -160,11 +160,12 @@ type EmailProviderDomainConfig struct {
 }
 
 type SendEmailRequest struct {
-	To      []string
-	Subject string
-	Body    string
-	IsHTML  bool
-	From    *EmailAddress // Optional: use default if not provided
+	To        []string
+	Subject   string
+	Body      string
+	IsHTML    bool
+	From      *EmailAddress // Optional: use default if not provided
+	InReplyTo string        // Optional: Message-ID of the email being replied to
 }
 
 type EmailAddress struct {

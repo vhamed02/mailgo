@@ -120,6 +120,14 @@ func (a *Adapter) SendTransactionalEmail(ctx context.Context, req domain.SendEma
 	} else {
 		payload["textContent"] = req.Body
 	}
+	// Propagate threading headers so the reply is linked to the original message
+	// both in receiving clients and on Brevo's SMTP relay.
+	if req.InReplyTo != "" {
+		payload["headers"] = map[string]string{
+			"In-Reply-To": req.InReplyTo,
+			"References":  req.InReplyTo,
+		}
+	}
 	return a.makeRequest(ctx, "POST", "/smtp/email", payload)
 }
 
