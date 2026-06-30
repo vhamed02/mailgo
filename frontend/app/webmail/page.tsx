@@ -314,6 +314,39 @@ function WebmailApp({ mailboxes, initialMailbox, password }: {
     try {
       const ordered = [...c.messages].reverse()
       const fulls = await Promise.all(ordered.map(m => client.getMessage(m.uid, activeFolder)))
+
+      // Also pull sent replies for this thread from the Sent folder so replies
+      // appear in the conversation after a page refresh (Gmail-like behaviour).
+      try {
+        const sentFolder = folders.find(f =>
+          f.display_name === 'Sent' || f.name.toUpperCase() === 'SENT'
+        )
+        if (sentFolder) {
+          const sentRes = await client.listMessages(sentFolder.name, 1, 100)
+          const threadMids = new Set<string>()
+          for (const m of [...ordered, ...fulls]) {
+            if (m.message_id) threadMids.add(m.message_id)
+          }
+          const subjectKey = normalizeSubject(c.subject)
+          const sentMatches = sentRes.data.filter(m =>
+            (m.in_reply_to && threadMids.has(m.in_reply_to)) ||
+            (m.references && refIds(m.references).some(r => threadMids.has(r))) ||
+            normalizeSubject(m.subject) === subjectKey
+          )
+          const sentFulls = await Promise.all(
+            sentMatches.map(m => client.getMessage(m.uid, sentFolder.name))
+          )
+          // Merge, deduplicate by message_id, sort by date.
+          const seen = new Set(fulls.map(m => m.message_id).filter(Boolean))
+          for (const m of sentFulls) {
+            if (!m.message_id || !seen.has(m.message_id)) {
+              fulls.push(m)
+              if (m.message_id) seen.add(m.message_id)
+            }
+          }
+        }
+      } catch { /* Sent folder fetch is best-effort */ }
+
       fulls.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       setThread(fulls)
       if (!silent) setView('thread')
@@ -454,19 +487,12 @@ function WebmailApp({ mailboxes, initialMailbox, password }: {
 
         {view === 'thread' && (
           <div className="flex flex-col h-full">
-            {/* Sticky subject + reply bar at the top of the main panel */}
+            {/* Sticky subject bar at the top of the main panel */}
             <div className="flex-shrink-0 flex items-center justify-between px-8 py-4 border-b border-gray-100 bg-white">
               <div className="min-w-0">
                 <h1 className="text-xl font-bold text-gray-900 leading-tight truncate">{thread[0]?.subject || '(no subject)'}</h1>
                 <p className="text-xs text-gray-400 mt-0.5">{thread.length} message{thread.length > 1 ? 's' : ''}</p>
               </div>
-              <button onClick={() => { setReplyMsg(thread[thread.length - 1]); setView('reply') }}
-                className="flex-shrink-0 ml-6 h-9 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold text-sm transition-colors flex items-center gap-1.5 shadow-sm">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                </svg>
-                Reply
-              </button>
             </div>
             {/* Scrollable thread body */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto px-8 py-4">
