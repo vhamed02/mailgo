@@ -40,12 +40,31 @@ func normalizeEmailList(list []string) []string {
 type MailService struct {
 	imap          domain.IMAPAdapter
 	emailProvider domain.EmailSenderAdapter
+	mailboxRepo   domain.MailboxRepository
 	fromName      string
 	domain        string
 }
 
 func NewMailService(imap domain.IMAPAdapter, emailProvider domain.EmailSenderAdapter, fromName, sendDomain string) *MailService {
 	return &MailService{imap: imap, emailProvider: emailProvider, fromName: fromName, domain: sendDomain}
+}
+
+// WithMailboxRepo allows the mail service to resolve display names from the DB.
+func (s *MailService) WithMailboxRepo(repo domain.MailboxRepository) *MailService {
+	s.mailboxRepo = repo
+	return s
+}
+
+// senderDisplayName returns the mailbox DisplayName from DB if available,
+// falling back to the global fromName config value.
+func (s *MailService) senderDisplayName(ctx context.Context, mailboxAddr string) string {
+	if s.mailboxRepo != nil {
+		mb, err := s.mailboxRepo.GetByEmail(ctx, mailboxAddr)
+		if err == nil && mb.DisplayName != "" {
+			return mb.DisplayName
+		}
+	}
+	return s.fromName
 }
 
 // generateMessageID creates a fresh RFC 2822 Message-ID for every new message.
@@ -103,8 +122,9 @@ func (s *MailService) MoveToTrash(addr, password, folder string, uid uint32) err
 }
 
 func (s *MailService) Compose(req domain.ComposeRequest) error {
+	displayName := s.senderDisplayName(context.Background(), req.MailboxAddress)
 	if req.From == "" {
-		req.From = fmt.Sprintf("%s <%s>", s.fromName, req.MailboxAddress)
+		req.From = fmt.Sprintf("%s <%s>", displayName, req.MailboxAddress)
 	}
 
 	log.Printf("[Compose] raw To: %v", req.To)
@@ -117,7 +137,7 @@ func (s *MailService) Compose(req domain.ComposeRequest) error {
 		Subject:   req.Subject,
 		Body:      req.Body,
 		IsHTML:    req.IsHTML,
-		From:      &domain.EmailAddress{Email: req.MailboxAddress, Name: s.fromName},
+		From:      &domain.EmailAddress{Email: req.MailboxAddress, Name: displayName},
 		InReplyTo: req.InReplyTo,
 	}); err != nil {
 		return err
@@ -127,8 +147,9 @@ func (s *MailService) Compose(req domain.ComposeRequest) error {
 }
 
 func (s *MailService) Reply(req domain.ComposeRequest) error {
+	displayName := s.senderDisplayName(context.Background(), req.MailboxAddress)
 	if req.From == "" {
-		req.From = fmt.Sprintf("%s <%s>", s.fromName, req.MailboxAddress)
+		req.From = fmt.Sprintf("%s <%s>", displayName, req.MailboxAddress)
 	}
 	if !hasRePrefix(req.Subject) {
 		req.Subject = "Re: " + req.Subject
@@ -152,7 +173,7 @@ func (s *MailService) Reply(req domain.ComposeRequest) error {
 		Subject:   req.Subject,
 		Body:      req.Body,
 		IsHTML:    req.IsHTML,
-		From:      &domain.EmailAddress{Email: req.MailboxAddress, Name: s.fromName},
+		From:      &domain.EmailAddress{Email: req.MailboxAddress, Name: displayName},
 		InReplyTo: req.InReplyTo,
 	}); err != nil {
 		return err

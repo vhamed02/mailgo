@@ -196,9 +196,23 @@ func (s *MailboxService) GetMailbox(ctx context.Context, id uuid.UUID, orgID uui
 	return mailbox, nil
 }
 
-// ListMailboxes lists all mailboxes for an organization
+// ListMailboxes lists all mailboxes for an organization with live usage stats.
 func (s *MailboxService) ListMailboxes(ctx context.Context, orgID uuid.UUID) ([]*domain.Mailbox, error) {
-	return s.mailboxRepo.ListByOrganization(ctx, orgID)
+	mailboxes, err := s.mailboxRepo.ListByOrganization(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+	// Enrich with live usage from mail server (best-effort, don't fail the list).
+	for _, mb := range mailboxes {
+		if stats, err := s.mailServer.GetMailboxStats(ctx, mb.Email); err == nil {
+			mb.UsedBytes = stats.UsedBytes
+			// Also sync quota from mail server if our DB has 0 (first load).
+			if mb.QuotaBytes == 0 && stats.QuotaBytes > 0 {
+				mb.QuotaBytes = stats.QuotaBytes
+			}
+		}
+	}
+	return mailboxes, nil
 }
 
 // UpdateMailbox updates a mailbox

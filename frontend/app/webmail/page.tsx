@@ -208,7 +208,7 @@ function MessageView({ msg, onReply, compact }: {
       <div className="border-t border-gray-100 pt-4">
         {msg.body_html ? (
           <iframe
-            srcDoc={`<!doctype html><html><head><meta charset="utf-8"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"><style>*,body,p,div,span,td,th,a,li{font-family:'Inter',ui-sans-serif,system-ui,sans-serif!important;font-size:15px!important;}body{margin:0;padding:0;}</style></head><body>${msg.body_html}</body></html>`}
+            srcDoc={`<!doctype html><html><head><meta charset="utf-8"><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"><style>html{font-size:15px!important;}*,body,p,div,span,td,th,a,li,h1,h2,h3,h4,h5,h6{font-family:'Inter',ui-sans-serif,system-ui,sans-serif!important;font-size:15px!important;}body{margin:0;padding:0;}</style></head><body>${msg.body_html}</body></html>`}
             sandbox="allow-same-origin allow-popups"
             className="w-full border-0 rounded-lg block"
             style={{ height: '0px' }}
