@@ -50,7 +50,7 @@ func (r *MailboxRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.
 	query := `
 		SELECT id, organization_id, domain_id, email, local_part,
 		       display_name, status, quota_bytes, used_bytes, password_hash,
-		       password_encrypted, created_at, updated_at, suspended_at
+		       COALESCE(password_encrypted, '') as password_encrypted, created_at, updated_at, suspended_at
 		FROM mailboxes
 		WHERE id = $1
 	`
@@ -87,7 +87,7 @@ func (r *MailboxRepository) GetByEmail(ctx context.Context, email string) (*doma
 	query := `
 		SELECT id, organization_id, domain_id, email, local_part,
 		       display_name, status, quota_bytes, used_bytes, password_hash,
-		       password_encrypted, created_at, updated_at, suspended_at
+		       COALESCE(password_encrypted, '') as password_encrypted, created_at, updated_at, suspended_at
 		FROM mailboxes
 		WHERE email = $1
 	`
@@ -124,7 +124,7 @@ func (r *MailboxRepository) ListByOrganization(ctx context.Context, orgID uuid.U
 	query := `
 		SELECT id, organization_id, domain_id, email, local_part,
 		       display_name, status, quota_bytes, used_bytes, password_hash,
-		       password_encrypted, created_at, updated_at, suspended_at
+		       COALESCE(password_encrypted, '') as password_encrypted, created_at, updated_at, suspended_at
 		FROM mailboxes
 		WHERE organization_id = $1 AND status != 'deleted'
 		ORDER BY created_at DESC
@@ -168,7 +168,7 @@ func (r *MailboxRepository) ListByDomain(ctx context.Context, domainID uuid.UUID
 	query := `
 		SELECT id, organization_id, domain_id, email, local_part,
 		       display_name, status, quota_bytes, used_bytes, password_hash,
-		       password_encrypted, created_at, updated_at, suspended_at
+		       COALESCE(password_encrypted, '') as password_encrypted, created_at, updated_at, suspended_at
 		FROM mailboxes
 		WHERE domain_id = $1 AND status != 'deleted'
 		ORDER BY created_at DESC
