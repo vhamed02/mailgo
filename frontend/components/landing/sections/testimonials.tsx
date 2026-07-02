@@ -51,13 +51,6 @@ const TESTIMONIALS: Testimonial[] = [
     initials: 'LF',
     color: 'bg-amber-500',
   },
-  {
-    quote: 'Support actually responds, around the clock. It feels like having an email team on call.',
-    name: 'Omar Haddad',
-    role: 'COO, Pied Piper',
-    initials: 'OH',
-    color: 'bg-violet-500',
-  },
 ]
 
 function Stars() {
