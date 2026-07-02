@@ -6,8 +6,31 @@ import { Providers } from './providers'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'MailGo - Email Hosting Platform',
-  description: 'Professional email hosting for your business',
+  title: {
+    default: 'MailGo — Professional email hosting for modern teams',
+    template: '%s · MailGo',
+  },
+  description:
+    'MailGo is professional email hosting with a lightning-fast webmail, admin controls and built-in deliverability. Bring your domain and get started in minutes.',
+  keywords: [
+    'email hosting',
+    'business email',
+    'custom domain email',
+    'webmail',
+    'professional email',
+  ],
+  openGraph: {
+    title: 'MailGo — Professional email hosting for modern teams',
+    description:
+      'Secure, scalable email hosting with a fast webmail, admin dashboard and built-in deliverability tools.',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MailGo — Professional email hosting for modern teams',
+    description:
+      'Secure, scalable email hosting with a fast webmail, admin dashboard and built-in deliverability tools.',
+  },
 }
 
 export default function RootLayout({
