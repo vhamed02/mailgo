@@ -93,7 +93,7 @@ function HeroProductMock() {
   const messages = [
     { from: 'Acme Procurement', subject: 'PO #4821 — confirmation needed', time: '9:42', unread: true, color: 'bg-indigo-500' },
     { from: 'Maya Chen', subject: 'Re: Q3 roadmap sync', time: '8:15', unread: true, color: 'bg-rose-500' },
-    { from: 'GitHub', subject: '[mailgo/webmail] PR approved', time: 'Tue', unread: false, color: 'bg-slate-500' },
+    { from: 'GitHub', subject: '[mailbox/webmail] PR approved', time: 'Tue', unread: false, color: 'bg-slate-500' },
     { from: 'Stripe', subject: 'Your June payout arrived', time: 'Mon', unread: false, color: 'bg-emerald-500' },
   ]
 
@@ -105,7 +105,7 @@ function HeroProductMock() {
         <span className="h-3 w-3 rounded-full bg-emerald-400" />
         <div className="mx-auto flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs text-slate-400">
           <span className="h-2 w-2 rounded-full bg-emerald-400" />
-          app.mailgo.io/webmail
+          mailbox.yerevan.digital/webmail
         </div>
       </div>
 
