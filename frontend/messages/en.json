@@ -1,0 +1,210 @@
+{
+  "nav": {
+    "features": "Features",
+    "product": "Product",
+    "customers": "Customers",
+    "security": "Security",
+    "signIn": "Sign in",
+    "getStarted": "Get started"
+  },
+  "hero": {
+    "badge": "New · Webmail 2.0 is here",
+    "titleLead": "Professional email hosting,",
+    "titleHighlight": "built for modern teams",
+    "subtitle": "Spin up secure mailboxes on your own domain in minutes. MailGo pairs a lightning-fast webmail with the admin controls and deliverability tools your business actually needs.",
+    "ctaPrimary": "Get started free",
+    "ctaSecondary": "See the product",
+    "trust": {
+      "noCard": "No credit card required",
+      "trial": "14-day free trial",
+      "cancel": "Cancel anytime"
+    }
+  },
+  "logos": {
+    "trusted": "Trusted by fast-growing teams worldwide"
+  },
+  "features": {
+    "eyebrow": "Features",
+    "title": "Everything you need to run business email",
+    "description": "MailGo brings hosting, webmail, admin controls and deliverability tools together, so your team can stop stitching tools together and just send.",
+    "items": {
+      "domains": {
+        "title": "Custom domains",
+        "description": "Bring your own domain and spin up branded mailboxes like hello@yourcompany.com in minutes, with automatic DNS verification."
+      },
+      "team": {
+        "title": "Team management",
+        "description": "Provision mailboxes, assign roles, and delegate admins. Invite your whole team and control access from one dashboard."
+      },
+      "securityFeat": {
+        "title": "Enterprise security",
+        "description": "SPF, DKIM and DMARC come preconfigured. Enforce 2FA, audit access, and keep phishing out of the inbox."
+      },
+      "webmail": {
+        "title": "Lightning webmail",
+        "description": "A fast, keyboard-friendly webmail with threaded conversations, instant search and a clean, distraction-free composer."
+      },
+      "deliverability": {
+        "title": "Deliverability toolkit",
+        "description": "Real-time reputation monitoring, bounce analytics and queue insights so your messages actually land in the inbox."
+      },
+      "encryption": {
+        "title": "Encryption at rest",
+        "description": "Mailboxes are encrypted at rest with per-tenant keys, plus optional end-to-end encryption for sensitive conversations."
+      }
+    }
+  },
+  "product": {
+    "eyebrow": "The product",
+    "title": "One platform, from inbox to infrastructure",
+    "description": "MailGo is built so operators, admins and end users each get exactly what they need, without the glue work.",
+    "learnMore": "Learn more",
+    "rows": {
+      "webmail": {
+        "eyebrow": "Webmail",
+        "title": "A webmail your team will actually enjoy",
+        "description": "Threaded conversations, instant search and a keyboard-first composer make reading and replying effortless on any device.",
+        "bullet1": "Threaded conversations with smart collapsing",
+        "bullet2": "Sub-50ms full-text search across every mailbox",
+        "bullet3": "Snooze, schedule send and rich signatures",
+        "bullet4": "Works beautifully on mobile, tablet and desktop"
+      },
+      "admin": {
+        "eyebrow": "Admin",
+        "title": "Run your whole organization from one dashboard",
+        "description": "Provision mailboxes, manage domains and keep an eye on usage and deliverability without leaving a single page.",
+        "bullet1": "Bulk mailbox provisioning and role-based admin access",
+        "bullet2": "Per-domain DNS verification and quota controls",
+        "bullet3": "Usage, storage and cost reporting in real time",
+        "bullet4": "SSO and directory sync for growing teams"
+      },
+      "security": {
+        "eyebrow": "Security",
+        "title": "Deliverability and security, handled for you",
+        "description": "Authentication, encryption and reputation monitoring are on by default, so your mail reaches the inbox and stays safe.",
+        "bullet1": "SPF, DKIM and DMARC auto-configured per domain",
+        "bullet2": "Per-tenant encryption keys and optional E2EE",
+        "bullet3": "Live reputation and bounce analytics",
+        "bullet4": "2FA enforcement and full access audit logs"
+      }
+    }
+  },
+  "stats": {
+    "uptime": "Uptime SLA",
+    "mailboxes": "Mailboxes hosted",
+    "storage": "Storage per user",
+    "support": "Expert support"
+  },
+  "testimonials": {
+    "eyebrow": "Customers",
+    "title": "Loved by teams who rely on email",
+    "description": "From two-person startups to organizations with hundreds of mailboxes, teams trust MailGo to keep their email fast, secure and delivered.",
+    "items": {
+      "one": {
+        "quote": "We migrated 400 mailboxes to MailGo over a weekend and never looked back. Deliverability jumped and our support tickets about email all but disappeared.",
+        "role": "Head of IT, Northwind"
+      },
+      "two": {
+        "quote": "The webmail is genuinely fast. Our team stopped asking for a desktop client within a week.",
+        "role": "Ops Lead, Globex"
+      },
+      "three": {
+        "quote": "SPF, DKIM and DMARC were configured for us automatically. That alone saved me a full day of DNS work.",
+        "role": "Founder, Initech"
+      },
+      "four": {
+        "quote": "Provisioning a new joiner's mailbox takes seconds. The admin dashboard is exactly what we wanted.",
+        "role": "CTO, Hooli"
+      },
+      "five": {
+        "quote": "Inbox placement analytics finally give us visibility we never had with our previous provider.",
+        "role": "Growth, Vandelay"
+      }
+    }
+  },
+  "cta": {
+    "title": "Ready to give your team better email?",
+    "description": "Start free in minutes. Bring your domain, add your team, and send your first message today, no credit card required.",
+    "ctaPrimary": "Get started free",
+    "signIn": "Sign in",
+    "trust": "Trusted by 128,000+ mailboxes · 99.9% uptime SLA"
+  },
+  "footer": {
+    "description": "Professional email hosting with a fast webmail, admin controls and deliverability tools, all in one platform.",
+    "operational": "All systems operational",
+    "rights": "© {year} MailGo. All rights reserved.",
+    "cols": {
+      "product": "Product",
+      "company": "Company",
+      "resources": "Resources",
+      "legal": "Legal"
+    },
+    "links": {
+      "features": "Features",
+      "webmail": "Webmail",
+      "security": "Security",
+      "pricing": "Pricing",
+      "changelog": "Changelog",
+      "about": "About",
+      "customers": "Customers",
+      "careers": "Careers",
+      "blog": "Blog",
+      "contact": "Contact",
+      "documentation": "Documentation",
+      "apiReference": "API reference",
+      "guides": "Guides",
+      "status": "Status",
+      "support": "Support",
+      "privacy": "Privacy",
+      "terms": "Terms",
+      "dpa": "DPA"
+    }
+  },
+  "authCommon": {
+    "errorGeneric": "An error occurred. Please try again.",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "you@company.com",
+    "passwordLabel": "Password",
+    "brandLine": "© {year} MailGo. Professional email hosting.",
+    "privacy": "Privacy",
+    "terms": "Terms",
+    "help": "Help"
+  },
+  "login": {
+    "title": "Welcome back",
+    "subtitle": "Sign in to your MailGo account",
+    "passwordPlaceholder": "Enter your password",
+    "remember": "Remember me",
+    "forgot": "Forgot password?",
+    "submit": "Sign in",
+    "submitting": "Signing in...",
+    "newHere": "New to MailGo?",
+    "createAccount": "Create an account"
+  },
+  "register": {
+    "title": "Create your account",
+    "subtitle": "Start managing your professional email today",
+    "personalInfo": "Personal Information",
+    "firstName": "First name",
+    "firstNamePlaceholder": "John",
+    "lastName": "Last name",
+    "lastNamePlaceholder": "Doe",
+    "accountCreds": "Account Credentials",
+    "passwordPlaceholder": "Create a strong password",
+    "passwordHint": "Must be at least 8 characters long",
+    "orgDetails": "Organization Details",
+    "orgName": "Organization name",
+    "orgNamePlaceholder": "Acme Corporation",
+    "orgSlug": "Organization slug",
+    "orgSlugPlaceholder": "acme-corporation",
+    "orgSlugHint": "Lowercase letters, numbers, and hyphens only",
+    "agreePrefix": "I agree to the",
+    "termsOfService": "Terms of Service",
+    "and": "and",
+    "privacyPolicy": "Privacy Policy",
+    "submit": "Create account",
+    "submitting": "Creating account...",
+    "haveAccount": "Already have an account?",
+    "signInInstead": "Sign in instead"
+  }
+}

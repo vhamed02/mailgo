@@ -1,50 +1,51 @@
 import { Github, Twitter, Linkedin } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Container } from '../container'
 import { Logo } from '../logo'
 
 type FooterColumn = {
-  title: string
-  links: { label: string; href: string }[]
+  titleKey: string
+  links: { labelKey: string; href: string }[]
 }
 
 const COLUMNS: FooterColumn[] = [
   {
-    title: 'Product',
+    titleKey: 'product',
     links: [
-      { label: 'Features', href: '#features' },
-      { label: 'Webmail', href: '#product' },
-      { label: 'Security', href: '#security' },
-      { label: 'Pricing', href: '#cta' },
-      { label: 'Changelog', href: '#' },
+      { labelKey: 'features', href: '#features' },
+      { labelKey: 'webmail', href: '#product' },
+      { labelKey: 'security', href: '#security' },
+      { labelKey: 'pricing', href: '#cta' },
+      { labelKey: 'changelog', href: '#' },
     ],
   },
   {
-    title: 'Company',
+    titleKey: 'company',
     links: [
-      { label: 'About', href: '#' },
-      { label: 'Customers', href: '#customers' },
-      { label: 'Careers', href: '#' },
-      { label: 'Blog', href: '#' },
-      { label: 'Contact', href: '#' },
+      { labelKey: 'about', href: '#' },
+      { labelKey: 'customers', href: '#customers' },
+      { labelKey: 'careers', href: '#' },
+      { labelKey: 'blog', href: '#' },
+      { labelKey: 'contact', href: '#' },
     ],
   },
   {
-    title: 'Resources',
+    titleKey: 'resources',
     links: [
-      { label: 'Documentation', href: '#' },
-      { label: 'API reference', href: '#' },
-      { label: 'Guides', href: '#' },
-      { label: 'Status', href: '#' },
-      { label: 'Support', href: '#' },
+      { labelKey: 'documentation', href: '#' },
+      { labelKey: 'apiReference', href: '#' },
+      { labelKey: 'guides', href: '#' },
+      { labelKey: 'status', href: '#' },
+      { labelKey: 'support', href: '#' },
     ],
   },
   {
-    title: 'Legal',
+    titleKey: 'legal',
     links: [
-      { label: 'Privacy', href: '#' },
-      { label: 'Terms', href: '#' },
-      { label: 'Security', href: '#' },
-      { label: 'DPA', href: '#' },
+      { labelKey: 'privacy', href: '#' },
+      { labelKey: 'terms', href: '#' },
+      { labelKey: 'security', href: '#' },
+      { labelKey: 'dpa', href: '#' },
     ],
   },
 ]
@@ -56,6 +57,8 @@ const SOCIALS = [
 ]
 
 export function Footer() {
+  const t = useTranslations('footer')
+  const year = new Date().getFullYear()
   return (
     <footer className="border-t border-slate-200 bg-slate-50">
       <Container className="py-14 lg:py-16">
@@ -63,8 +66,7 @@ export function Footer() {
           <div className="col-span-2 md:col-span-3 lg:col-span-1">
             <Logo />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-500">
-              Professional email hosting with a fast webmail, admin controls and
-              deliverability tools, all in one platform.
+              {t('description')}
             </p>
             <div className="mt-5 flex items-center gap-2">
               {SOCIALS.map((s) => {
@@ -84,16 +86,16 @@ export function Footer() {
           </div>
 
           {COLUMNS.map((col) => (
-            <div key={col.title}>
-              <h3 className="text-sm font-semibold text-slate-900">{col.title}</h3>
+            <div key={col.titleKey}>
+              <h3 className="text-sm font-semibold text-slate-900">{t(`cols.${col.titleKey}`)}</h3>
               <ul className="mt-4 space-y-3">
                 {col.links.map((link) => (
-                  <li key={link.label}>
+                  <li key={link.labelKey}>
                     <a
                       href={link.href}
                       className="text-sm text-slate-500 transition-colors hover:text-slate-900"
                     >
-                      {link.label}
+                      {t(`links.${link.labelKey}`)}
                     </a>
                   </li>
                 ))}
@@ -104,11 +106,11 @@ export function Footer() {
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-slate-200 pt-6 sm:flex-row">
           <p className="text-sm text-slate-500">
-            © {new Date().getFullYear()} MailGo. All rights reserved.
+            {t('rights', { year })}
           </p>
           <div className="flex items-center gap-2 text-sm text-slate-500">
             <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-            All systems operational
+            {t('operational')}
           </div>
         </div>
       </Container>

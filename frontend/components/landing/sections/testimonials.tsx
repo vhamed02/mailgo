@@ -1,10 +1,12 @@
 import { Star, Quote } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Container } from '../container'
 import { Section } from '../section'
 import { SectionHeading } from '../section-heading'
 import { cn } from '@/lib/utils'
 
 type Testimonial = {
+  key: string
   quote: string
   name: string
   role: string
@@ -13,45 +15,13 @@ type Testimonial = {
   featured?: boolean
 }
 
-const TESTIMONIALS: Testimonial[] = [
-  {
-    quote:
-      'We migrated 400 mailboxes to MailGo over a weekend and never looked back. Deliverability jumped and our support tickets about email all but disappeared.',
-    name: 'Sarah Patel',
-    role: 'Head of IT, Northwind',
-    initials: 'SP',
-    color: 'bg-indigo-500',
-    featured: true,
-  },
-  {
-    quote: 'The webmail is genuinely fast. Our team stopped asking for a desktop client within a week.',
-    name: 'Diego Romero',
-    role: 'Ops Lead, Globex',
-    initials: 'DR',
-    color: 'bg-rose-500',
-  },
-  {
-    quote: 'SPF, DKIM and DMARC were configured for us automatically. That alone saved me a full day of DNS work.',
-    name: 'Aiko Tanaka',
-    role: 'Founder, Initech',
-    initials: 'AT',
-    color: 'bg-emerald-500',
-  },
-  {
-    quote: 'Provisioning a new joiner\u2019s mailbox takes seconds. The admin dashboard is exactly what we wanted.',
-    name: 'Marcus Webb',
-    role: 'CTO, Hooli',
-    initials: 'MW',
-    color: 'bg-sky-500',
-  },
-  {
-    quote: 'Inbox placement analytics finally give us visibility we never had with our previous provider.',
-    name: 'Lena Fischer',
-    role: 'Growth, Vandelay',
-    initials: 'LF',
-    color: 'bg-amber-500',
-  },
-]
+const TESTIMONIAL_META = [
+  { key: 'one', name: 'Sarah Patel', initials: 'SP', color: 'bg-indigo-500', featured: true },
+  { key: 'two', name: 'Diego Romero', initials: 'DR', color: 'bg-rose-500' },
+  { key: 'three', name: 'Aiko Tanaka', initials: 'AT', color: 'bg-emerald-500' },
+  { key: 'four', name: 'Marcus Webb', initials: 'MW', color: 'bg-sky-500' },
+  { key: 'five', name: 'Lena Fischer', initials: 'LF', color: 'bg-amber-500' },
+] as const
 
 function Stars() {
   return (
@@ -99,18 +69,25 @@ function TestimonialCard({ t }: { t: Testimonial }) {
 }
 
 export function Testimonials() {
+  const t = useTranslations('testimonials')
+  const testimonials: Testimonial[] = TESTIMONIAL_META.map((m) => ({
+    ...m,
+    quote: t(`items.${m.key}.quote`),
+    role: t(`items.${m.key}.role`),
+    featured: 'featured' in m ? m.featured : undefined,
+  }))
   return (
     <Section id="customers" className="bg-white">
       <Container>
         <SectionHeading
-          eyebrow="Customers"
-          title="Loved by teams who rely on email"
-          description="From two-person startups to organizations with hundreds of mailboxes, teams trust MailGo to keep their email fast, secure and delivered."
+          eyebrow={t('eyebrow')}
+          title={t('title')}
+          description={t('description')}
         />
 
         <div className="mt-14 grid grid-cols-1 gap-6 lg:mt-16 lg:grid-cols-3">
-          {TESTIMONIALS.map((t) => (
-            <TestimonialCard key={t.name} t={t} />
+          {testimonials.map((item) => (
+            <TestimonialCard key={item.key} t={item} />
           ))}
         </div>
       </Container>

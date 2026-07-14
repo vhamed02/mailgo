@@ -1,11 +1,13 @@
 import { ArrowRight, Check, Sparkles } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Container } from '../container'
 import { ButtonLink } from '../button-link'
 import { Badge } from '../badge'
 
-const TRUST_ITEMS = ['No credit card required', '14-day free trial', 'Cancel anytime']
-
 export function Hero() {
+  const t = useTranslations('hero')
+  const trustItems = [t('trust.noCard'), t('trust.trial'), t('trust.cancel')]
+
   return (
     <section className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 -z-10">
@@ -23,7 +25,7 @@ export function Hero() {
           >
             <Badge>
               <Sparkles className="h-3.5 w-3.5" />
-              New · Webmail 2.0 is here
+              {t('badge')}
             </Badge>
           </a>
 
@@ -31,17 +33,15 @@ export function Hero() {
             className="animate-fade-up mt-6 text-4xl font-bold tracking-tight text-slate-900 sm:text-6xl lg:text-7xl"
             style={{ animationDelay: '120ms' }}
           >
-            Professional email hosting,
-            <span className="text-gradient-brand"> built for modern teams</span>
+            {t('titleLead')}
+            <span className="text-gradient-brand"> {t('titleHighlight')}</span>
           </h1>
 
           <p
             className="animate-fade-up mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-slate-600 sm:text-xl"
             style={{ animationDelay: '180ms' }}
           >
-            Spin up secure mailboxes on your own domain in minutes. MailGo pairs a
-            lightning-fast webmail with the admin controls and deliverability tools
-            your business actually needs.
+            {t('subtitle')}
           </p>
 
           <div
@@ -49,11 +49,11 @@ export function Hero() {
             style={{ animationDelay: '240ms' }}
           >
             <ButtonLink href="/auth/register" variant="primary" size="xl" className="w-full sm:w-auto">
-              Get started free
+              {t('ctaPrimary')}
               <ArrowRight className="h-5 w-5" />
             </ButtonLink>
             <ButtonLink href="#product" variant="secondary" size="xl" className="w-full sm:w-auto">
-              See the product
+              {t('ctaSecondary')}
             </ButtonLink>
           </div>
 
@@ -61,7 +61,7 @@ export function Hero() {
             className="animate-fade-up mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-slate-500"
             style={{ animationDelay: '300ms' }}
           >
-            {TRUST_ITEMS.map((item) => (
+            {trustItems.map((item) => (
               <li key={item} className="inline-flex items-center gap-1.5">
                 <Check className="h-4 w-4 text-indigo-600" />
                 {item}

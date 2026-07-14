@@ -1,4 +1,5 @@
 import { Check, ArrowRight, ShieldCheck, KeyRound, FileLock, Activity } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Container } from '../container'
 import { Section } from '../section'
 import { cn } from '@/lib/utils'
@@ -22,6 +23,7 @@ function FeatureRow({
   reverse,
   visual,
 }: FeatureRowProps) {
+  const t = useTranslations('product')
   return (
     <div id={id} className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16 scroll-mt-24">
       <div className={cn(reverse ? 'lg:order-2' : 'lg:order-1')}>
@@ -48,7 +50,7 @@ function FeatureRow({
           href="#cta"
           className="mt-7 inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
         >
-          Learn more
+          {t('learnMore')}
           <ArrowRight className="h-4 w-4" />
         </a>
       </div>
@@ -209,58 +211,58 @@ function SecurityVisual() {
 }
 
 export function ValueProposition() {
+  const t = useTranslations('product')
   return (
     <Section id="product" className="bg-slate-50/60">
       <Container>
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-sm font-semibold uppercase tracking-wider text-indigo-600">
-            The product
+            {t('eyebrow')}
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
-            One platform, from inbox to infrastructure
+            {t('title')}
           </h2>
           <p className="mt-4 text-lg leading-relaxed text-slate-600">
-            MailGo is built so operators, admins and end users each get exactly what
-            they need, without the glue work.
+            {t('description')}
           </p>
         </div>
 
         <div className="mt-16 space-y-20 lg:space-y-28">
           <FeatureRow
-            eyebrow="Webmail"
-            title="A webmail your team will actually enjoy"
-            description="Threaded conversations, instant search and a keyboard-first composer make reading and replying effortless on any device."
+            eyebrow={t('rows.webmail.eyebrow')}
+            title={t('rows.webmail.title')}
+            description={t('rows.webmail.description')}
             bullets={[
-              'Threaded conversations with smart collapsing',
-              'Sub-50ms full-text search across every mailbox',
-              'Snooze, schedule send and rich signatures',
-              'Works beautifully on mobile, tablet and desktop',
+              t('rows.webmail.bullet1'),
+              t('rows.webmail.bullet2'),
+              t('rows.webmail.bullet3'),
+              t('rows.webmail.bullet4'),
             ]}
             visual={<WebmailVisual />}
           />
           <FeatureRow
-            eyebrow="Admin"
-            title="Run your whole organization from one dashboard"
-            description="Provision mailboxes, manage domains and keep an eye on usage and deliverability without leaving a single page."
+            eyebrow={t('rows.admin.eyebrow')}
+            title={t('rows.admin.title')}
+            description={t('rows.admin.description')}
             bullets={[
-              'Bulk mailbox provisioning and role-based admin access',
-              'Per-domain DNS verification and quota controls',
-              'Usage, storage and cost reporting in real time',
-              'SSO and directory sync for growing teams',
+              t('rows.admin.bullet1'),
+              t('rows.admin.bullet2'),
+              t('rows.admin.bullet3'),
+              t('rows.admin.bullet4'),
             ]}
             reverse
             visual={<DashboardVisual />}
           />
           <FeatureRow
             id="security"
-            eyebrow="Security"
-            title="Deliverability and security, handled for you"
-            description="Authentication, encryption and reputation monitoring are on by default, so your mail reaches the inbox and stays safe."
+            eyebrow={t('rows.security.eyebrow')}
+            title={t('rows.security.title')}
+            description={t('rows.security.description')}
             bullets={[
-              'SPF, DKIM and DMARC auto-configured per domain',
-              'Per-tenant encryption keys and optional E2EE',
-              'Live reputation and bounce analytics',
-              '2FA enforcement and full access audit logs',
+              t('rows.security.bullet1'),
+              t('rows.security.bullet2'),
+              t('rows.security.bullet3'),
+              t('rows.security.bullet4'),
             ]}
             visual={<SecurityVisual />}
           />

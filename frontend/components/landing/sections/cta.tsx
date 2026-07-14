@@ -1,8 +1,10 @@
 import { ArrowRight } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Container } from '../container'
 import { ButtonLink } from '../button-link'
 
 export function CTA() {
+  const t = useTranslations('cta')
   return (
     <section id="cta" className="scroll-mt-24 bg-white py-20 sm:py-24 lg:py-28">
       <Container>
@@ -13,11 +15,10 @@ export function CTA() {
 
           <div className="relative mx-auto max-w-2xl">
             <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
-              Ready to give your team better email?
+              {t('title')}
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-indigo-100">
-              Start free in minutes. Bring your domain, add your team, and send your
-              first message today, no credit card required.
+              {t('description')}
             </p>
             <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <ButtonLink
@@ -26,7 +27,7 @@ export function CTA() {
                 size="xl"
                 className="w-full sm:w-auto"
               >
-                Get started free
+                {t('ctaPrimary')}
                 <ArrowRight className="h-5 w-5" />
               </ButtonLink>
               <ButtonLink
@@ -35,11 +36,11 @@ export function CTA() {
                 size="xl"
                 className="w-full text-white hover:bg-white/10 sm:w-auto"
               >
-                Sign in
+                {t('signIn')}
               </ButtonLink>
             </div>
             <p className="mt-6 text-sm text-indigo-200">
-              Trusted by 128,000+ mailboxes · 99.9% uptime SLA
+              {t('trust')}
             </p>
           </div>
         </div>

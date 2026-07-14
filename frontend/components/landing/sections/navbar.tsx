@@ -2,19 +2,22 @@
 
 import { useEffect, useState } from 'react'
 import { Menu, X } from 'lucide-react'
+import { useTranslations } from 'next-intl'
 import { Container } from '../container'
 import { Logo } from '../logo'
 import { ButtonLink } from '../button-link'
+import { LanguageSwitcher } from '@/components/language-switcher'
 import { cn } from '@/lib/utils'
 
 const NAV_LINKS = [
-  { label: 'Features', href: '#features' },
-  { label: 'Product', href: '#product' },
-  { label: 'Customers', href: '#customers' },
-  { label: 'Security', href: '#security' },
-]
+  { key: 'features', href: '#features' },
+  { key: 'product', href: '#product' },
+  { key: 'customers', href: '#customers' },
+  { key: 'security', href: '#security' },
+] as const
 
 export function Navbar() {
+  const t = useTranslations('nav')
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
 
@@ -51,17 +54,18 @@ export function Navbar() {
               href={link.href}
               className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
             >
-              {link.label}
+              {t(link.key)}
             </a>
           ))}
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
+          <LanguageSwitcher />
           <ButtonLink href="/auth/login" variant="ghost" size="md">
-            Sign in
+            {t('signIn')}
           </ButtonLink>
           <ButtonLink href="/auth/register" variant="primary" size="md">
-            Get started
+            {t('getStarted')}
           </ButtonLink>
         </div>
 
@@ -86,9 +90,12 @@ export function Navbar() {
                 onClick={() => setOpen(false)}
                 className="block rounded-lg px-3 py-2.5 text-base font-medium text-slate-700 hover:bg-slate-50"
               >
-                {link.label}
+                {t(link.key)}
               </a>
             ))}
+            <div className="flex justify-center pt-2">
+              <LanguageSwitcher />
+            </div>
             <div className="grid grid-cols-2 gap-2 pt-3">
               <ButtonLink
                 href="/auth/login"
@@ -96,7 +103,7 @@ export function Navbar() {
                 size="md"
                 onClick={() => setOpen(false)}
               >
-                Sign in
+                {t('signIn')}
               </ButtonLink>
               <ButtonLink
                 href="/auth/register"
@@ -104,7 +111,7 @@ export function Navbar() {
                 size="md"
                 onClick={() => setOpen(false)}
               >
-                Get started
+                {t('getStarted')}
               </ButtonLink>
             </div>
           </div>

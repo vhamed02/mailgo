@@ -3,13 +3,18 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { LanguageSwitcher } from '@/components/language-switcher'
 import { authApi } from '@/lib/api-client'
 
 export default function RegisterPage() {
   const router = useRouter()
+  const t = useTranslations('register')
+  const tc = useTranslations('authCommon')
+  const year = new Date().getFullYear()
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -49,7 +54,7 @@ export default function RegisterPage() {
       // Redirect to dashboard
       router.push('/dashboard')
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'An error occurred. Please try again.')
+      setError(err.response?.data?.error || err.message || tc('errorGeneric'))
     } finally {
       setLoading(false)
     }
@@ -58,6 +63,9 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
       <div className="max-w-2xl w-full">
+        <div className="mb-3 flex justify-end">
+          <LanguageSwitcher />
+        </div>
         {/* Card */}
         <div className="bg-white p-8 rounded-2xl shadow-2xl border border-gray-100">
           {/* Logo/Brand */}
@@ -67,8 +75,8 @@ export default function RegisterPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Create your account</h2>
-            <p className="text-gray-600">Start managing your professional email today</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">{t('title')}</h2>
+            <p className="text-gray-600">{t('subtitle')}</p>
           </div>
 
           {/* Error Alert */}
@@ -89,12 +97,12 @@ export default function RegisterPage() {
                 <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-                Personal Information
+                {t('personalInfo')}
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="first_name" className="text-sm font-medium text-gray-700 mb-2 block">
-                    First name
+                    {t('firstName')}
                   </Label>
                   <Input
                     id="first_name"
@@ -102,14 +110,14 @@ export default function RegisterPage() {
                     type="text"
                     value={formData.first_name}
                     onChange={handleChange}
-                    placeholder="John"
+                    placeholder={t('firstNamePlaceholder')}
                     required
                     className="h-11 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-lg"
                   />
                 </div>
                 <div>
                   <Label htmlFor="last_name" className="text-sm font-medium text-gray-700 mb-2 block">
-                    Last name
+                    {t('lastName')}
                   </Label>
                   <Input
                     id="last_name"
@@ -117,7 +125,7 @@ export default function RegisterPage() {
                     type="text"
                     value={formData.last_name}
                     onChange={handleChange}
-                    placeholder="Doe"
+                    placeholder={t('lastNamePlaceholder')}
                     required
                     className="h-11 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-lg"
                   />
@@ -131,12 +139,12 @@ export default function RegisterPage() {
                 <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
-                Account Credentials
+                {t('accountCreds')}
               </h3>
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="email" className="text-sm font-medium text-gray-700 mb-2 block">
-                    Email address
+                    {tc('emailLabel')}
                   </Label>
                   <Input
                     id="email"
@@ -144,14 +152,14 @@ export default function RegisterPage() {
                     type="email"
                     value={formData.email}
                     onChange={handleChange}
-                    placeholder="you@company.com"
+                    placeholder={tc('emailPlaceholder')}
                     required
                     className="h-11 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-lg"
                   />
                 </div>
                 <div>
                   <Label htmlFor="password" className="text-sm font-medium text-gray-700 mb-2 block">
-                    Password
+                    {tc('passwordLabel')}
                   </Label>
                   <Input
                     id="password"
@@ -159,12 +167,12 @@ export default function RegisterPage() {
                     type="password"
                     value={formData.password}
                     onChange={handleChange}
-                    placeholder="Create a strong password"
+                    placeholder={t('passwordPlaceholder')}
                     required
                     minLength={8}
                     className="h-11 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-lg"
                   />
-                  <p className="mt-1.5 text-xs text-gray-500">Must be at least 8 characters long</p>
+                  <p className="mt-1.5 text-xs text-gray-500">{t('passwordHint')}</p>
                 </div>
               </div>
             </div>
@@ -175,12 +183,12 @@ export default function RegisterPage() {
                 <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
-                Organization Details
+                {t('orgDetails')}
               </h3>
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="org_name" className="text-sm font-medium text-gray-700 mb-2 block">
-                    Organization name
+                    {t('orgName')}
                   </Label>
                   <Input
                     id="org_name"
@@ -188,14 +196,14 @@ export default function RegisterPage() {
                     type="text"
                     value={formData.org_name}
                     onChange={handleChange}
-                    placeholder="Acme Corporation"
+                    placeholder={t('orgNamePlaceholder')}
                     required
                     className="h-11 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-lg"
                   />
                 </div>
                 <div>
                   <Label htmlFor="org_slug" className="text-sm font-medium text-gray-700 mb-2 block">
-                    Organization slug
+                    {t('orgSlug')}
                   </Label>
                   <Input
                     id="org_slug"
@@ -203,12 +211,12 @@ export default function RegisterPage() {
                     type="text"
                     value={formData.org_slug}
                     onChange={handleChange}
-                    placeholder="acme-corporation"
+                    placeholder={t('orgSlugPlaceholder')}
                     required
                     pattern="[a-z0-9-]+"
                     className="h-11 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-lg font-mono text-sm"
                   />
-                  <p className="mt-1.5 text-xs text-gray-500">Lowercase letters, numbers, and hyphens only</p>
+                  <p className="mt-1.5 text-xs text-gray-500">{t('orgSlugHint')}</p>
                 </div>
               </div>
             </div>
@@ -221,10 +229,10 @@ export default function RegisterPage() {
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2 mt-1 cursor-pointer" 
               />
               <label className="ml-3 text-sm text-gray-600">
-                I agree to the{' '}
-                <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">Terms of Service</a>
-                {' '}and{' '}
-                <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">Privacy Policy</a>
+                {t('agreePrefix')}{' '}
+                <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">{t('termsOfService')}</a>
+                {' '}{t('and')}{' '}
+                <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">{t('privacyPolicy')}</a>
               </label>
             </div>
 
@@ -240,11 +248,11 @@ export default function RegisterPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Creating account...
+                  {t('submitting')}
                 </div>
               ) : (
                 <span className="flex items-center justify-center">
-                  Create account
+                  {t('submit')}
                   <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
@@ -260,7 +268,7 @@ export default function RegisterPage() {
                 <div className="w-full border-t border-gray-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-500 font-medium">Already have an account?</span>
+                <span className="px-4 bg-white text-gray-500 font-medium">{t('haveAccount')}</span>
               </div>
             </div>
           </div>
@@ -271,7 +279,7 @@ export default function RegisterPage() {
               href="/auth/login" 
               className="inline-flex items-center text-blue-600 hover:text-blue-700 font-semibold text-sm transition-colors group"
             >
-              Sign in instead
+              {t('signInInstead')}
               <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
@@ -281,7 +289,7 @@ export default function RegisterPage() {
 
         {/* Footer */}
         <div className="mt-6 text-center text-sm text-gray-600">
-          <p>© 2026 MailGo. Professional email hosting.</p>
+          <p>{tc('brandLine', { year })}</p>
         </div>
       </div>
     </div>

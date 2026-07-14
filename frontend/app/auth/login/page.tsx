@@ -3,13 +3,18 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { LanguageSwitcher } from '@/components/language-switcher'
 import { authApi } from '@/lib/api-client'
 
 export default function LoginPage() {
   const router = useRouter()
+  const t = useTranslations('login')
+  const tc = useTranslations('authCommon')
+  const year = new Date().getFullYear()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -32,7 +37,7 @@ export default function LoginPage() {
       // Redirect to dashboard
       router.push('/dashboard')
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || 'An error occurred. Please try again.')
+      setError(err.response?.data?.error || err.message || tc('errorGeneric'))
     } finally {
       setLoading(false)
     }
@@ -41,6 +46,9 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-4">
       <div className="max-w-md w-full">
+        <div className="mb-3 flex justify-end">
+          <LanguageSwitcher />
+        </div>
         {/* Card */}
         <div className="bg-white p-8 rounded-2xl shadow-2xl border border-gray-100">
           {/* Logo/Brand */}
@@ -50,8 +58,8 @@ export default function LoginPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome back</h2>
-            <p className="text-gray-600">Sign in to your MailGo account</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">{t('title')}</h2>
+            <p className="text-gray-600">{t('subtitle')}</p>
           </div>
 
           {/* Error Alert */}
@@ -68,7 +76,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <Label htmlFor="email" className="text-sm font-semibold text-gray-700 mb-2 block">
-                Email address
+                {tc('emailLabel')}
               </Label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -81,7 +89,7 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@company.com"
+                  placeholder={tc('emailPlaceholder')}
                   required
                   className="pl-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-xl transition-all"
                 />
@@ -90,7 +98,7 @@ export default function LoginPage() {
 
             <div>
               <Label htmlFor="password" className="text-sm font-semibold text-gray-700 mb-2 block">
-                Password
+                {tc('passwordLabel')}
               </Label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -103,7 +111,7 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder={t('passwordPlaceholder')}
                   required
                   className="pl-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-xl transition-all"
                 />
@@ -113,10 +121,10 @@ export default function LoginPage() {
             <div className="flex items-center justify-between text-sm">
               <label className="flex items-center cursor-pointer group">
                 <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-2 mr-2 cursor-pointer transition-all" />
-                <span className="text-gray-600 group-hover:text-gray-900 transition-colors">Remember me</span>
+                <span className="text-gray-600 group-hover:text-gray-900 transition-colors">{t('remember')}</span>
               </label>
               <a href="#" className="text-blue-600 hover:text-blue-700 font-semibold transition-colors">
-                Forgot password?
+                {t('forgot')}
               </a>
             </div>
 
@@ -131,11 +139,11 @@ export default function LoginPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Signing in...
+                  {t('submitting')}
                 </div>
               ) : (
                 <span className="flex items-center justify-center">
-                  Sign in
+                  {t('submit')}
                   <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                   </svg>
@@ -151,7 +159,7 @@ export default function LoginPage() {
                 <div className="w-full border-t border-gray-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-500 font-medium">New to MailGo?</span>
+                <span className="px-4 bg-white text-gray-500 font-medium">{t('newHere')}</span>
               </div>
             </div>
           </div>
@@ -162,7 +170,7 @@ export default function LoginPage() {
               href="/auth/register" 
               className="inline-flex items-center text-blue-600 hover:text-blue-700 font-semibold text-sm transition-colors group"
             >
-              Create an account
+              {t('createAccount')}
               <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
@@ -172,13 +180,13 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div className="mt-6 text-center text-sm text-gray-600">
-          <p>© 2026 MailGo. Professional email hosting.</p>
+          <p>{tc('brandLine', { year })}</p>
           <div className="mt-2 space-x-4">
-            <a href="#" className="hover:text-gray-900 transition-colors">Privacy</a>
+            <a href="#" className="hover:text-gray-900 transition-colors">{tc('privacy')}</a>
             <span>·</span>
-            <a href="#" className="hover:text-gray-900 transition-colors">Terms</a>
+            <a href="#" className="hover:text-gray-900 transition-colors">{tc('terms')}</a>
             <span>·</span>
-            <a href="#" className="hover:text-gray-900 transition-colors">Help</a>
+            <a href="#" className="hover:text-gray-900 transition-colors">{tc('help')}</a>
           </div>
         </div>
       </div>

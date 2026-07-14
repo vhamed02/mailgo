@@ -1,9 +1,11 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import { NextIntlClientProvider } from 'next-intl'
+import { getLocale, getMessages } from 'next-intl/server'
 import './globals.css'
 import { Providers } from './providers'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin', 'cyrillic'] })
 
 export const metadata: Metadata = {
   title: {
@@ -33,17 +35,22 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const locale = await getLocale()
+  const messages = await getMessages()
+
   return (
-    <html lang="en">
+    <html lang={locale}>
       <body className={inter.className}>
-        <Providers>
-          {children}
-        </Providers>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <Providers>
+            {children}
+          </Providers>
+        </NextIntlClientProvider>
       </body>
     </html>
   )
