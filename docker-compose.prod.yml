@@ -96,11 +96,11 @@ services:
       context: ./frontend
       dockerfile: ../docker/Dockerfile.frontend
       args:
-        NEXT_PUBLIC_API_URL: https://bizmail.tracix.net/api/v1
+        NEXT_PUBLIC_API_URL: https://mailbox.yerevan.digital/api/v1
     container_name: mailgo-frontend
     restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_URL: https://bizmail.tracix.net/api/v1
+      NEXT_PUBLIC_API_URL: https://mailbox.yerevan.digital/api/v1
       NODE_ENV: production
     ports:
       - "127.0.0.1:3001:3000"

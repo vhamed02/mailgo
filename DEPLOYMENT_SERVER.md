@@ -1,7 +1,7 @@
 # MailGo - Production Deployment Guide
 
 **Server:** Ubuntu 24 - `/home` for projects
-**Public website/API:** `bizmail.tracix.net` through Cloudflare proxy
+**Public website/API:** `mailbox.yerevan.digital` through Cloudflare proxy
 **Mail server hostname:** `mail.tracix.net` DNS-only, used for MX and mail protocols
 **SSL:** Cloudflare for public web traffic; no certbot needed for MailGo
 **Nginx:** Already running on port 80, serving vendorex.shop and dg.firacode.ir
@@ -13,9 +13,9 @@ No new server packages are required by this plan. New runtime services run under
 
 ## Prerequisites
 
-- DNS: `bizmail.tracix.net` A record pointing to your server IP, Cloudflare proxied
+- DNS: `mailbox.yerevan.digital` A record pointing to your server IP, Cloudflare proxied
 - DNS: `mail.tracix.net` A record pointing to your server IP, DNS-only
-- Cloudflare SSL mode for `bizmail.tracix.net`: **Full** (not Full Strict) since Nginx has no real cert
+- Cloudflare SSL mode for `mailbox.yerevan.digital`: **Full** (not Full Strict) since Nginx has no real cert
 - Ports 25, 465, 587, 993, and 995 open on the server firewall for Mailcow mail traffic
 - MX records for hosted mail domains point to `mail.tracix.net`, DNS-only
 
@@ -72,7 +72,7 @@ BREVO_API_URL=https://api.brevo.com/v3
 BREVO_FROM_EMAIL=info@yerevan.digital
 BREVO_FROM_NAME=MailGo
 
-NEXT_PUBLIC_API_URL=https://bizmail.tracix.net/api/v1
+NEXT_PUBLIC_API_URL=https://mailbox.yerevan.digital/api/v1
 ```
 
 `MAILCOW_API_URL` and `IMAP_HOST` use Mailcow's Docker network aliases. MailGo joins the Mailcow network through `docker-compose.prod.yml`; no manual `docker network connect` is needed.
@@ -140,7 +140,7 @@ Paste this:
 ```nginx
 server {
     listen 80;
-    server_name bizmail.tracix.net;
+    server_name mailbox.yerevan.digital;
 
     location / {
         proxy_pass         http://127.0.0.1:3001;
@@ -274,7 +274,7 @@ At Cloudflare DNS for `tracix.net`:
 
 | Type | Name | Value | Proxy |
 |------|------|-------|-------|
-| A | `bizmail` | `your-server-IP` | Proxied |
+| A | `mailbox.yerevan.digital` | `your-server-IP` | Proxied |
 | A | `admin-mail` | `your-server-IP` | Proxied |
 | A | `mail` | `your-server-IP` | DNS only |
 
@@ -292,10 +292,10 @@ Mail protocol hostnames and MX targets must be DNS-only because Cloudflare canno
 
 ```bash
 # MailGo API
-curl https://bizmail.tracix.net/health
+curl https://mailbox.yerevan.digital/health
 
 # MailGo frontend
-curl -I https://bizmail.tracix.net
+curl -I https://mailbox.yerevan.digital
 
 # Worker logs
 docker logs mailgo-worker --tail 20
@@ -308,7 +308,7 @@ docker logs mailgo-api --tail 20
 
 ## Post-deploy checklist
 
-- [ ] `https://bizmail.tracix.net` loads the MailGo login page
+- [ ] `https://mailbox.yerevan.digital` loads the MailGo login page
 - [ ] Register an account and log in
 - [ ] Add `yerevan.digital` domain - status goes to "Setting up" then "DNS Required"
 - [ ] Mailcow admin accessible at `https://admin-mail.tracix.net`

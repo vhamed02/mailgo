@@ -37,6 +37,6 @@ done
 
 echo ""
 echo "=== Deploy complete ==="
-echo "Frontend : https://bizmail.tracix.net"
-echo "API      : https://bizmail.tracix.net/api/v1"
+echo "Frontend : https://mailbox.yerevan.digital"
+echo "API      : https://mailbox.yerevan.digital/api/v1"
 echo "Health   : http://localhost:8082/health"
