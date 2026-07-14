@@ -2,7 +2,7 @@
 
 # Default target
 help:
-	@echo "MailGo - Development Commands"
+	@echo "Mailbox - Development Commands"
 	@echo ""
 	@echo "Usage:"
 	@echo "  make build       Build all Docker images"

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "================================================"
-echo "  Starting MailGo System"
+echo "  Starting Mailbox System"
 echo "================================================"
 echo ""
 

@@ -1,8 +1,8 @@
-# MailGo - Quick Start Guide
+# Mailbox - Quick Start Guide
 
-## What is MailGo?
+## What is Mailbox?
 
-MailGo is a **production-grade, multi-tenant email hosting SaaS platform** that provides:
+Mailbox is a **production-grade, multi-tenant email hosting SaaS platform** that provides:
 - Custom domain email hosting
 - Mailbox management with quotas
 - Email aliases and forwarding
@@ -48,7 +48,7 @@ MailGo is a **production-grade, multi-tenant email hosting SaaS platform** that 
 
 **Problem**: Most email hosting platforms tightly couple business logic with infrastructure (Mailcow, Postfix, etc.)
 
-**Solution**: MailGo treats email infrastructure as **swappable adapters** behind interfaces:
+**Solution**: Mailbox treats email infrastructure as **swappable adapters** behind interfaces:
 
 ```go
 // Domain layer defines WHAT we need
@@ -336,7 +336,7 @@ After setup:
 
 ## Summary
 
-MailGo is a **well-architected foundation** for a production email hosting SaaS:
+Mailbox is a **well-architected foundation** for a production email hosting SaaS:
 
 - ✅ Clean, maintainable codebase
 - ✅ Proper separation of concerns

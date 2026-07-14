@@ -1,4 +1,4 @@
-# MailGo System Handoff Document
+# Mailbox System Handoff Document
 
 **Date**: June 28, 2026  
 **System Status**: ✅ Core System Operational  

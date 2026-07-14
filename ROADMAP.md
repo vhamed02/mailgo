@@ -1,4 +1,4 @@
-# MailGo — Development Roadmap
+# Mailbox — Development Roadmap
 
 **Last updated**: June 28, 2026  
 **Current state**: Authentication working end-to-end. All other features scaffolded but not wired.

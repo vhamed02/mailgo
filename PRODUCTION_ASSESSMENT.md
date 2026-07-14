@@ -1,8 +1,8 @@
-# MailGo - Production Readiness Assessment
+# Mailbox - Production Readiness Assessment
 
 ## Executive Summary
 
-This document provides a **brutally honest assessment** of the MailGo system's production readiness, critical risks, and areas that would fail under real-world load.
+This document provides a **brutally honest assessment** of the Mailbox system's production readiness, critical risks, and areas that would fail under real-world load.
 
 ---
 

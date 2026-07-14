@@ -222,7 +222,7 @@ func (h *Handlers) HandleDomainVerification(ctx context.Context, task *asynq.Tas
 			_ = h.emailSender.SendTransactionalEmail(ctx, domain.SendEmailRequest{
 				To:      []string{payload.UserEmail},
 				Subject: fmt.Sprintf("Domain %s is now active", dom.Name),
-				Body:    fmt.Sprintf(`<html><body><h2>Domain verified!</h2><p>Your domain <strong>%s</strong> is now active and ready for use.</p><p>— The MailGo Team</p></body></html>`, dom.Name),
+				Body:    fmt.Sprintf(`<html><body><h2>Domain verified!</h2><p>Your domain <strong>%s</strong> is now active and ready for use.</p><p>— The Mailbox Team</p></body></html>`, dom.Name),
 				IsHTML:  true,
 			})
 		}

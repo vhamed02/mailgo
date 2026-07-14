@@ -1,4 +1,4 @@
-# MailGo Deployment Guide
+# Mailbox Deployment Guide
 
 ## Prerequisites
 

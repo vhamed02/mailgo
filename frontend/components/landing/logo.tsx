@@ -12,7 +12,7 @@ export function Logo({ className, href = '/', showWordmark = true }: LogoProps) 
     <Link
       href={href}
       className={cn('group inline-flex items-center gap-2.5', className)}
-      aria-label="MailGo home"
+      aria-label="Mailbox home"
     >
       <span className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-blue-600 shadow-lg shadow-indigo-600/25">
         <svg
@@ -38,7 +38,7 @@ export function Logo({ className, href = '/', showWordmark = true }: LogoProps) 
       </span>
       {showWordmark ? (
         <span className="text-lg font-bold tracking-tight text-slate-900">
-          Mail<span className="text-indigo-600">Go</span>
+          Mail<span className="text-indigo-600">box</span>
         </span>
       ) : null}
     </Link>

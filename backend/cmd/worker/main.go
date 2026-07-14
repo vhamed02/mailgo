@@ -67,7 +67,7 @@ func main() {
 		getEnv("BREVO_API_URL", "https://api.brevo.com/v3"),
 		getEnv("BREVO_API_KEY", ""),
 		getEnv("BREVO_FROM_EMAIL", "noreply@mailgo.com"),
-		getEnv("BREVO_FROM_NAME", "MailGo"),
+		getEnv("BREVO_FROM_NAME", "Mailbox"),
 		30*time.Second,
 	)
 

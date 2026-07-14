@@ -1,4 +1,4 @@
-# MailGo Documentation Index
+# Mailbox Documentation Index
 
 **Quick Navigation**: Find what you need fast
 

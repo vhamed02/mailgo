@@ -1,9 +1,9 @@
-# MailGo - Production Deployment Guide
+# Mailbox - Production Deployment Guide
 
 **Server:** Ubuntu 24 - `/home` for projects
 **Public website/API:** `mailbox.yerevan.digital` through Cloudflare proxy
 **Mail server hostname:** `mail.tracix.net` DNS-only, used for MX and mail protocols
-**SSL:** Cloudflare for public web traffic; no certbot needed for MailGo
+**SSL:** Cloudflare for public web traffic; no certbot needed for Mailbox
 **Nginx:** Already running on port 80, serving yerevan.digital and dg.firacode.ir
 **Docker:** Already installed
 
@@ -70,18 +70,18 @@ IMAP_TLS=true
 BREVO_API_KEY=xkeysib-REDACTED
 BREVO_API_URL=https://api.brevo.com/v3
 BREVO_FROM_EMAIL=info@yerevan.digital
-BREVO_FROM_NAME=MailGo
+BREVO_FROM_NAME=Mailbox
 
 NEXT_PUBLIC_API_URL=https://mailbox.yerevan.digital/api/v1
 ```
 
-`MAILCOW_API_URL` and `IMAP_HOST` use Mailcow's Docker network aliases. MailGo joins the Mailcow network through `docker-compose.prod.yml`; no manual `docker network connect` is needed.
+`MAILCOW_API_URL` and `IMAP_HOST` use Mailcow's Docker network aliases. Mailbox joins the Mailcow network through `docker-compose.prod.yml`; no manual `docker network connect` is needed.
 
 ---
 
 ## Step 3 - Set up Mailcow
 
-Mailcow is a full mail server stack and runs separately alongside MailGo.
+Mailcow is a full mail server stack and runs separately alongside Mailbox.
 
 ```bash
 cd /home
@@ -123,13 +123,13 @@ docker compose pull
 docker compose up -d
 ```
 
-This creates the `mailcowdockerized_mailcow-network` Docker network that MailGo uses.
+This creates the `mailcowdockerized_mailcow-network` Docker network that Mailbox uses.
 
 ---
 
-## Step 4 - Add Nginx block for MailGo website
+## Step 4 - Add Nginx block for Mailbox website
 
-Your existing Nginx config is at `/etc/nginx/sites-available/`. Add a new block for MailGo:
+Your existing Nginx config is at `/etc/nginx/sites-available/`. Add a new block for Mailbox:
 
 ```bash
 nano /etc/nginx/sites-available/mailgo
@@ -244,9 +244,9 @@ nano /home/mailgo/.env.production
 
 ---
 
-## Step 8 - Build and start MailGo containers
+## Step 8 - Build and start Mailbox containers
 
-MailGo starts after Mailcow because `docker-compose.prod.yml` uses Mailcow's external Docker network.
+Mailbox starts after Mailcow because `docker-compose.prod.yml` uses Mailcow's external Docker network.
 
 ```bash
 cd /home/mailgo
@@ -291,10 +291,10 @@ Mail protocol hostnames and MX targets must be DNS-only because Cloudflare canno
 ## Step 10 - Verify everything
 
 ```bash
-# MailGo API
+# Mailbox API
 curl https://mailbox.yerevan.digital/health
 
-# MailGo frontend
+# Mailbox frontend
 curl -I https://mailbox.yerevan.digital
 
 # Worker logs
@@ -308,7 +308,7 @@ docker logs mailgo-api --tail 20
 
 ## Post-deploy checklist
 
-- [ ] `https://mailbox.yerevan.digital` loads the MailGo login page
+- [ ] `https://mailbox.yerevan.digital` loads the Mailbox login page
 - [ ] Register an account and log in
 - [ ] Add `yerevan.digital` domain - status goes to "Setting up" then "DNS Required"
 - [ ] Mailcow admin accessible at `https://admin-mail.tracix.net`

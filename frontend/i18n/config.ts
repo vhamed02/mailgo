@@ -1,4 +1,4 @@
-// Language ordering for MailGo: Armenian (default) → Russian → English.
+// Language ordering for Mailbox: Armenian (default) → Russian → English.
 export const locales = ['hy', 'ru', 'en'] as const
 export type Locale = (typeof locales)[number]
 

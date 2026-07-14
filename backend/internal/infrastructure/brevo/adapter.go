@@ -134,8 +134,8 @@ func (a *Adapter) SendTransactionalEmail(ctx context.Context, req domain.SendEma
 func (a *Adapter) SendWelcomeEmail(ctx context.Context, to, name string) error {
 	return a.SendTransactionalEmail(ctx, domain.SendEmailRequest{
 		To:      []string{to},
-		Subject: "Welcome to MailGo!",
-		Body:    fmt.Sprintf(`<html><body><h1>Welcome, %s!</h1><p>Your account is ready. Start by adding a domain.</p><p>— The MailGo Team</p></body></html>`, name),
+		Subject: "Welcome to Mailbox!",
+		Body:    fmt.Sprintf(`<html><body><h1>Welcome, %s!</h1><p>Your account is ready. Start by adding a domain.</p><p>— The Mailbox Team</p></body></html>`, name),
 		IsHTML:  true,
 	})
 }

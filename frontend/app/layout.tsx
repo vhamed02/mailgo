@@ -9,11 +9,11 @@ const inter = Inter({ subsets: ['latin', 'cyrillic'] })
 
 export const metadata: Metadata = {
   title: {
-    default: 'MailGo — Professional email hosting for modern teams',
-    template: '%s · MailGo',
+    default: 'Mailbox — Professional email hosting for modern teams',
+    template: '%s · Mailbox',
   },
   description:
-    'MailGo is professional email hosting with a lightning-fast webmail, admin controls and built-in deliverability. Bring your domain and get started in minutes.',
+    'Mailbox is professional email hosting with a lightning-fast webmail, admin controls and built-in deliverability. Bring your domain and get started in minutes.',
   keywords: [
     'email hosting',
     'business email',
@@ -22,14 +22,14 @@ export const metadata: Metadata = {
     'professional email',
   ],
   openGraph: {
-    title: 'MailGo — Professional email hosting for modern teams',
+    title: 'Mailbox — Professional email hosting for modern teams',
     description:
       'Secure, scalable email hosting with a fast webmail, admin dashboard and built-in deliverability tools.',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'MailGo — Professional email hosting for modern teams',
+    title: 'Mailbox — Professional email hosting for modern teams',
     description:
       'Secure, scalable email hosting with a fast webmail, admin dashboard and built-in deliverability tools.',
   },

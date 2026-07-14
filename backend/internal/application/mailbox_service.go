@@ -179,7 +179,7 @@ func (s *MailboxService) CreateMailbox(ctx context.Context, req CreateMailboxReq
 <h2>Mailbox created!</h2>
 <p>Your mailbox <strong>%s</strong> has been created and is being provisioned.</p>
 <p>It will be ready within a few minutes.</p>
-<p>— The MailGo Team</p>
+<p>— The Mailbox Team</p>
 </body></html>`, mailbox.Email),
 		IsHTML: true,
 	})

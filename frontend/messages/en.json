@@ -11,7 +11,7 @@
     "badge": "New · Webmail 2.0 is here",
     "titleLead": "Professional email hosting,",
     "titleHighlight": "built for modern teams",
-    "subtitle": "Spin up secure mailboxes on your own domain in minutes. MailGo pairs a lightning-fast webmail with the admin controls and deliverability tools your business actually needs.",
+    "subtitle": "Spin up secure mailboxes on your own domain in minutes. Mailbox pairs a lightning-fast webmail with the admin controls and deliverability tools your business actually needs.",
     "ctaPrimary": "Get started free",
     "ctaSecondary": "See the product",
     "trust": {
@@ -26,7 +26,7 @@
   "features": {
     "eyebrow": "Features",
     "title": "Everything you need to run business email",
-    "description": "MailGo brings hosting, webmail, admin controls and deliverability tools together, so your team can stop stitching tools together and just send.",
+    "description": "Mailbox brings hosting, webmail, admin controls and deliverability tools together, so your team can stop stitching tools together and just send.",
     "items": {
       "domains": {
         "title": "Custom domains",
@@ -57,7 +57,7 @@
   "product": {
     "eyebrow": "The product",
     "title": "One platform, from inbox to infrastructure",
-    "description": "MailGo is built so operators, admins and end users each get exactly what they need, without the glue work.",
+    "description": "Mailbox is built so operators, admins and end users each get exactly what they need, without the glue work.",
     "learnMore": "Learn more",
     "rows": {
       "webmail": {
@@ -98,10 +98,10 @@
   "testimonials": {
     "eyebrow": "Customers",
     "title": "Loved by teams who rely on email",
-    "description": "From two-person startups to organizations with hundreds of mailboxes, teams trust MailGo to keep their email fast, secure and delivered.",
+    "description": "From two-person startups to organizations with hundreds of mailboxes, teams trust Mailbox to keep their email fast, secure and delivered.",
     "items": {
       "one": {
-        "quote": "We migrated 400 mailboxes to MailGo over a weekend and never looked back. Deliverability jumped and our support tickets about email all but disappeared.",
+        "quote": "We migrated 400 mailboxes to Mailbox over a weekend and never looked back. Deliverability jumped and our support tickets about email all but disappeared.",
         "role": "Head of IT, Northwind"
       },
       "two": {
@@ -132,7 +132,7 @@
   "footer": {
     "description": "Professional email hosting with a fast webmail, admin controls and deliverability tools, all in one platform.",
     "operational": "All systems operational",
-    "rights": "© {year} MailGo. All rights reserved.",
+    "rights": "© {year} Mailbox. All rights reserved.",
     "cols": {
       "product": "Product",
       "company": "Company",
@@ -165,20 +165,20 @@
     "emailLabel": "Email address",
     "emailPlaceholder": "you@company.com",
     "passwordLabel": "Password",
-    "brandLine": "© {year} MailGo. Professional email hosting.",
+    "brandLine": "© {year} Mailbox. Professional email hosting.",
     "privacy": "Privacy",
     "terms": "Terms",
     "help": "Help"
   },
   "login": {
     "title": "Welcome back",
-    "subtitle": "Sign in to your MailGo account",
+    "subtitle": "Sign in to your Mailbox account",
     "passwordPlaceholder": "Enter your password",
     "remember": "Remember me",
     "forgot": "Forgot password?",
     "submit": "Sign in",
     "submitting": "Signing in...",
-    "newHere": "New to MailGo?",
+    "newHere": "New to Mailbox?",
     "createAccount": "Create an account"
   },
   "register": {

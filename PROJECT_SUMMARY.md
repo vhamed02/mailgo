@@ -1,4 +1,4 @@
-# MailGo - Project Summary
+# Mailbox - Project Summary
 
 ## What Has Been Built
 

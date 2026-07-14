@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# MailGo Setup Script
-# This script helps you get started with MailGo quickly
+# Mailbox Setup Script
+# This script helps you get started with Mailbox quickly
 
 set -e
 
 echo "================================================"
-echo "  MailGo - Email Hosting SaaS Setup"
+echo "  Mailbox - Email Hosting SaaS Setup"
 echo "================================================"
 echo ""
 
@@ -94,7 +94,7 @@ echo "⚠️  Migration step skipped - see PRODUCTION_ASSESSMENT.md for migratio
 echo ""
 
 echo "================================================"
-echo "  ✅ MailGo is running!"
+echo "  ✅ Mailbox is running!"
 echo "================================================"
 echo ""
 echo "Access the application:"

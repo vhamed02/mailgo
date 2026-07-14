@@ -1,4 +1,4 @@
-# Contributing to MailGo
+# Contributing to Mailbox
 
 ## Development Setup
 

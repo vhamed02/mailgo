@@ -1,8 +1,8 @@
-# MailGo - Production-Grade Multi-Tenant Email Hosting SaaS
+# Mailbox - Production-Grade Multi-Tenant Email Hosting SaaS
 
 ## Architecture Overview
 
-MailGo is a production-ready, multi-tenant email hosting platform built with strict architectural boundaries following hexagonal architecture principles.
+Mailbox is a production-ready, multi-tenant email hosting platform built with strict architectural boundaries following hexagonal architecture principles.
 
 ### Core Architectural Layers
 

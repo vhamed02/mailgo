@@ -2,7 +2,7 @@
 
 ## Overview
 
-A fully custom webmail UI built into MailGo, opening in a new tab, backed by a Go IMAP/SMTP bridge. No third-party webmail (no Roundcube, no SOGo).
+A fully custom webmail UI built into Mailbox, opening in a new tab, backed by a Go IMAP/SMTP bridge. No third-party webmail (no Roundcube, no SOGo).
 
 ---
 
@@ -49,7 +49,7 @@ All under `/api/v1/mail/` — require JWT auth + `X-Mailbox-Password` header.
 
 ### Request context (all mail endpoints)
 ```
-Header: Authorization: Bearer <jwt>        — identifies the MailGo user
+Header: Authorization: Bearer <jwt>        — identifies the Mailbox user
 Header: X-Mailbox-Address: info@example.com — which mailbox to open
 Header: X-Mailbox-Password: plaintext       — IMAP/SMTP credential
 ```
@@ -95,7 +95,7 @@ backend/internal/api/rest/handlers/
 ### Layout
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  [MailGo Webmail]   info@yerevan.digital ▾   [Compose]  │  ← top bar
+│  [Mailbox Webmail]   info@yerevan.digital ▾   [Compose]  │  ← top bar
 ├──────────┬──────────────────────┬──────────────────────-─┤
 │          │                      │                        │
 │ Folders  │   Email List         │   Email Reader         │
@@ -164,7 +164,7 @@ type Folder struct {
 - `X-Mailbox-Password` only travels over HTTPS in production
 - Never logged, never stored, lives only in memory during request
 - IMAP connection is opened per-request (stateless) — no persistent connections
-- JWT still required — proves the user has access to this MailGo account
+- JWT still required — proves the user has access to this Mailbox account
 - The mailbox address is validated against the user's org before connecting to IMAP
 
 ---

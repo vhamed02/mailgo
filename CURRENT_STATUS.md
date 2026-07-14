@@ -1,4 +1,4 @@
-# MailGo System - Current Status
+# Mailbox System - Current Status
 
 ## ✅ FULLY WORKING
 

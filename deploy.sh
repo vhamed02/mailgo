@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "=== MailGo Production Deploy ==="
+echo "=== Mailbox Production Deploy ==="
 
 if [ ! -f ".env.production" ]; then
   echo "ERROR: .env.production not found. Copy .env.production.example and fill in values."
@@ -15,7 +15,7 @@ git pull origin main
 
 echo "2. Checking Mailcow network..."
 if ! docker network inspect mailcowdockerized_mailcow-network > /dev/null 2>&1; then
-  echo "ERROR: mailcowdockerized_mailcow-network not found. Start Mailcow before MailGo."
+  echo "ERROR: mailcowdockerized_mailcow-network not found. Start Mailcow before Mailbox."
   exit 1
 fi
 

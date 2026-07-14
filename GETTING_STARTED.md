@@ -1,4 +1,4 @@
-# Getting Started with MailGo
+# Getting Started with Mailbox
 
 ## 🚀 Quick Start (5 minutes)
 

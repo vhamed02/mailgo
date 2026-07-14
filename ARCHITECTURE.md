@@ -1,8 +1,8 @@
-# MailGo Architecture Deep Dive
+# Mailbox Architecture Deep Dive
 
 ## System Overview
 
-MailGo is a multi-tenant email hosting SaaS platform built with strict architectural boundaries following hexagonal (ports & adapters) architecture principles.
+Mailbox is a multi-tenant email hosting SaaS platform built with strict architectural boundaries following hexagonal (ports & adapters) architecture principles.
 
 ## Core Design Principles
 

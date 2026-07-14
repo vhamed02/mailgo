@@ -153,12 +153,12 @@ func (s *AuthService) Register(ctx context.Context, req RegisterRequest) (*AuthR
 
 	_ = s.queue.EnqueueEmailSend(ctx, domain.SendEmailRequest{
 		To:      []string{user.Email},
-		Subject: "Welcome to MailGo!",
+		Subject: "Welcome to Mailbox!",
 		Body: fmt.Sprintf(`<html><body>
 <h2>Welcome, %s!</h2>
 <p>Your account and organisation <strong>%s</strong> are ready.</p>
 <p>Start by adding a domain, then create mailboxes for your team.</p>
-<p>— The MailGo Team</p>
+<p>— The Mailbox Team</p>
 </body></html>`, user.FirstName, org.Name),
 		IsHTML: true,
 	})
