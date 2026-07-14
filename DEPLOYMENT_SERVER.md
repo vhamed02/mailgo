@@ -4,7 +4,7 @@
 **Public website/API:** `mailbox.yerevan.digital` through Cloudflare proxy
 **Mail server hostname:** `mail.tracix.net` DNS-only, used for MX and mail protocols
 **SSL:** Cloudflare for public web traffic; no certbot needed for MailGo
-**Nginx:** Already running on port 80, serving vendorex.shop and dg.firacode.ir
+**Nginx:** Already running on port 80, serving yerevan.digital and dg.firacode.ir
 **Docker:** Already installed
 
 No new server packages are required by this plan. New runtime services run under Docker containers. The only host-level changes are DNS, firewall rules, and reverse-proxy config in the already installed Nginx.
