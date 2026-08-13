@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { mailboxApi, domainApi } from '@/lib/api-client'
+import { formatBytes } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -26,12 +27,6 @@ function StatusBadge({ status }: { status: string }) {
   return <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">{status}</span>
 }
 
-const fmt = (bytes: number) => {
-  if (bytes >= 1073741824) return `${(bytes / 1073741824).toFixed(1)} GB`
-  if (bytes >= 1048576) return `${(bytes / 1048576).toFixed(0)} MB`
-  return `${bytes} B`
-}
-
 export default function MailboxesPage() {
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([])
   const [domains, setDomains] = useState<Domain[]>([])
@@ -52,15 +47,28 @@ export default function MailboxesPage() {
     window.open(`/webmail?mailbox=${encodeURIComponent(email)}&id=${encodeURIComponent(id)}`, '_blank')
   }
 
-  const load = () => {
-    setLoading(true)
-    Promise.all([
+  const load = ({ silent = false } = {}) => {
+    if (!silent) setLoading(true)
+    return Promise.all([
       mailboxApi.list().then((r: any) => setMailboxes(r.data ?? [])),
       domainApi.list().then((r: any) => setDomains((r.data ?? []).filter((d: Domain) => d.dns_verified))),
-    ]).finally(() => setLoading(false))
+    ])
+      .catch(() => {})
+      .finally(() => { if (!silent) setLoading(false) })
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    // Usage grows as mail arrives, so refresh in place rather than making the
+    // user reload. Hidden tabs skip the poll to avoid idle mail server calls.
+    const tick = () => { if (document.visibilityState === 'visible') load({ silent: true }) }
+    const timer = setInterval(tick, 15000)
+    document.addEventListener('visibilitychange', tick)
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener('visibilitychange', tick)
+    }
+  }, [])
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -186,7 +194,7 @@ export default function MailboxesPage() {
                   <td className="px-6 py-4 font-medium text-gray-900">{m.email}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{m.display_name || '—'}</td>
                   <td className="px-6 py-4"><StatusBadge status={m.status} /></td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{fmt(m.used_bytes)} / {fmt(m.quota_bytes)}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{formatBytes(m.used_bytes)} / {formatBytes(m.quota_bytes)}</td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 justify-end">
                         <button

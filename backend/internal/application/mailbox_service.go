@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -246,14 +247,21 @@ func (s *MailboxService) ListMailboxes(ctx context.Context, orgID uuid.UUID) ([]
 	if err != nil {
 		return nil, err
 	}
-	// Enrich with live usage from mail server (best-effort, don't fail the list).
+	// Enrich with live usage from the mail server (best-effort, don't fail the
+	// list). The mail server is authoritative for both usage and quota: either
+	// can be changed there directly, so trust it over our stored copy.
+	stats, err := s.mailServer.ListMailboxStats(ctx)
+	if err != nil {
+		return mailboxes, nil
+	}
 	for _, mb := range mailboxes {
-		if stats, err := s.mailServer.GetMailboxStats(ctx, mb.Email); err == nil {
-			mb.UsedBytes = stats.UsedBytes
-			// Also sync quota from mail server if our DB has 0 (first load).
-			if mb.QuotaBytes == 0 && stats.QuotaBytes > 0 {
-				mb.QuotaBytes = stats.QuotaBytes
-			}
+		st, ok := stats[strings.ToLower(mb.Email)]
+		if !ok {
+			continue
+		}
+		mb.UsedBytes = st.UsedBytes
+		if st.QuotaBytes > 0 {
+			mb.QuotaBytes = st.QuotaBytes
 		}
 	}
 	return mailboxes, nil

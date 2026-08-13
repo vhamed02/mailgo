@@ -146,23 +146,50 @@ func (a *Adapter) DeleteAlias(ctx context.Context, source string) error {
 	return a.makeRequest(ctx, "POST", "/delete/alias", payload, nil)
 }
 
+// mailboxStatsResponse mirrors the fields the /get/mailbox endpoints return.
+// Both quota and quota_used are byte counts here, unlike /add/mailbox and
+// /edit/mailbox which take quota in MB.
+type mailboxStatsResponse struct {
+	Username  string  `json:"username"`
+	Quota     float64 `json:"quota"`
+	QuotaUsed float64 `json:"quota_used"`
+	Messages  float64 `json:"messages"`
+}
+
+func (r mailboxStatsResponse) toStats() *domain.MailboxStats {
+	return &domain.MailboxStats{
+		UsedBytes:    int64(r.QuotaUsed),
+		QuotaBytes:   int64(r.Quota),
+		MessageCount: int(r.Messages),
+	}
+}
+
 // GetMailboxStats retrieves mailbox usage statistics
 func (a *Adapter) GetMailboxStats(ctx context.Context, email string) (*domain.MailboxStats, error) {
-	var result map[string]interface{}
+	var result mailboxStatsResponse
 
 	err := a.makeRequest(ctx, "GET", fmt.Sprintf("/get/mailbox/%s", email), nil, &result)
 	if err != nil {
 		return nil, err
 	}
 
-	usedBytes, _ := result["bytes"].(float64)
-	quota, _ := result["quota"].(float64)
-	messages, _ := result["messages"].(float64)
+	return result.toStats(), nil
+}
 
-	stats := &domain.MailboxStats{
-		UsedBytes:    int64(usedBytes),
-		QuotaBytes:   int64(quota) * 1024 * 1024, // Mailcow quota is in MB
-		MessageCount: int(messages),
+// ListMailboxStats retrieves usage statistics for every mailbox Mailcow knows
+// about, keyed by lowercased email. One call keeps listing a whole organisation
+// off the per-mailbox request path.
+func (a *Adapter) ListMailboxStats(ctx context.Context) (map[string]*domain.MailboxStats, error) {
+	var results []mailboxStatsResponse
+
+	err := a.makeRequest(ctx, "GET", "/get/mailbox/all", nil, &results)
+	if err != nil {
+		return nil, err
+	}
+
+	stats := make(map[string]*domain.MailboxStats, len(results))
+	for _, r := range results {
+		stats[strings.ToLower(r.Username)] = r.toStats()
 	}
 
 	return stats, nil

@@ -113,6 +113,10 @@ type MailServerAdapter interface {
 
 	// GetMailboxStats retrieves mailbox usage statistics
 	GetMailboxStats(ctx context.Context, email string) (*MailboxStats, error)
+
+	// ListMailboxStats retrieves usage statistics for all known mailboxes,
+	// keyed by lowercased email address
+	ListMailboxStats(ctx context.Context) (map[string]*MailboxStats, error)
 }
 
 type CreateMailboxRequest struct {
