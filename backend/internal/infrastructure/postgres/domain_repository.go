@@ -46,13 +46,13 @@ func (r *DomainRepository) Create(ctx context.Context, d *domain.Domain) error {
 	query := `
 		INSERT INTO domains (
 			id, organization_id, name, status, dns_verified,
-			spf_record, dkim_record, dmarc_record,
+			mx_record, spf_record, dkim_record, dmarc_record,
 			verified_at, created_at, updated_at
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
 	`
 	_, err := r.db.Exec(ctx, query,
 		d.ID, d.OrganizationID, d.Name, d.Status, d.DNSVerified,
-		d.SPFRecord, d.DKIMRecord, d.DMARCRecord,
+		d.MXRecord, d.SPFRecord, d.DKIMRecord, d.DMARCRecord,
 		d.VerifiedAt, d.CreatedAt, d.UpdatedAt,
 	)
 	return err
