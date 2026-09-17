@@ -67,7 +67,7 @@ IMAP_HOST=dovecot
 IMAP_PORT=993
 IMAP_TLS=true
 
-BREVO_API_KEY=xkeysib-REDACTED
+BREVO_API_KEY=<generated>
 BREVO_API_URL=https://api.brevo.com/v3
 BREVO_FROM_EMAIL=info@yerevan.digital
 BREVO_FROM_NAME=Mailbox
